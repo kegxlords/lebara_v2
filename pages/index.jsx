@@ -40,7 +40,7 @@ export default function LoginPage() {
       {/* HERO BACKGROUND IMAGE */}
       <div className="auth-hero-bg">
          {/* Replace src with your actual image path in public/assets */}
-         <img src="/assets/public/assets/file_0000000020a881f58a4ebe5b727b73bd.png" alt="Lebara Voice" />
+         <img src="/assets/file_0000000020a881f58a4ebe5b727b73bd.png" alt="Lebara Voice" />
       </div>
 
       {/* FORM CARD */}
