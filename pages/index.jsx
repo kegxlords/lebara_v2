@@ -25,7 +25,6 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Login failed');
 
-      // Success: Redirect to Dashboard
       router.replace('/dashboard');
       
     } catch (err) {
@@ -36,15 +35,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-page">
-      {/* HERO BACKGROUND IMAGE */}
-      <div className="auth-hero-bg">
-         {/* Replace src with your actual image path in public/assets */}
+    <div className="auth-layout-container">
+      {/* BACKGROUND IMAGE LAYER */}
+      <div className="auth-bg-image-layer">
+         {/* Replace src with your actual image path */}
          <img src="/assets/file_0000000020a881f58a4ebe5b727b73bd.png" alt="Lebara Voice" />
       </div>
 
-      {/* FORM CARD */}
-      <div className="auth-card-modern">
+      {/* FLOATING FORM CARD */}
+      <div className="auth-floating-card">
         <h1>Welcome Back!</h1>
         <p className="sub">Sign in to continue your journey</p>
 
@@ -96,4 +95,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-}
+          }
