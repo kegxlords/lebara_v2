@@ -270,3 +270,205 @@ input:checked + .slider-admin:before { transform: translateX(20px); }
   .content-area { max-width: 800px; margin: 0 auto; }
   .bottom-nav { max-width: 800px; margin: 0 auto; border-radius: 16px 16px 0 0; }
 }
+/* =========================================
+   MODERN AUTH PAGES (LOGIN / REGISTER)
+   ========================================= */
+
+/* Container for pages with Hero Image */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background-color: #f0f9ff; /* Light blue fallback */
+  overflow-x: hidden;
+}
+
+/* Background Image Layer */
+.auth-hero-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 50%; /* Covers top half */
+  z-index: 0;
+  overflow: hidden;
+}
+.auth-hero-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.9;
+}
+
+/* Gradient Overlay to blend image into bg */
+.auth-hero-bg::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 100px;
+  background: linear-gradient(to bottom, transparent, #f0f9ff);
+}
+
+/* The White Card */
+.auth-card-modern {
+  position: relative;
+  z-index: 10;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px 24px;
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,.15);
+  width: 90%;
+  max-width: 400px;
+  margin-top: auto; /* Pushes it down slightly if needed */
+  margin-bottom: 40px;
+}
+
+.auth-card-modern h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--lb-navy);
+  text-align: center;
+  margin-bottom: 8px;
+}
+.auth-card-modern .sub {
+  font-size: 14px;
+  color: var(--lb-muted);
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+/* Input Groups */
+.input-group-wrapper {
+  margin-bottom: 16px;
+}
+.input-group-wrapper label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--lb-text);
+  margin-bottom: 6px;
+}
+
+/* Row Layout for Prefix + Input */
+.input-box-row {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+.input-box-row:focus-within {
+  border-color: var(--lb-pink);
+  box-shadow: 0 0 0 3px rgba(255, 77, 141, 0.1);
+  background: #fff;
+}
+
+.prefix-flag {
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--lb-navy);
+  white-space: nowrap;
+  border-right: 1px solid #e2e8f0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+.icon-left {
+  width: 18px;
+  height: 18px;
+  fill: #94a3b8;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.input-box-row input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--lb-text);
+  outline: none;
+  height: 48px;
+}
+
+.toggle-pass {
+  background: none;
+  border: none;
+  color: var(--lb-pink);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+/* Standalone Inputs (No prefix) */
+.standalone-input {
+  width: 100%;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--lb-text);
+  outline: none;
+  transition: all 0.2s ease;
+}
+.standalone-input:focus {
+  border-color: var(--lb-pink);
+  box-shadow: 0 0 0 3px rgba(255, 77, 141, 0.1);
+  background: #fff;
+}
+
+/* Buttons */
+.btn-signin-full {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #FF4D8D, #123A8F);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 8px;
+  box-shadow: 0 4px 12px rgba(18, 58, 143, 0.3);
+  transition: transform 0.1s;
+}
+.btn-signin-full:active { transform: scale(0.98); }
+.btn-signin-full:disabled { opacity: 0.7; cursor: not-allowed; }
+
+/* Footer Links */
+.footer-links {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--lb-muted);
+  line-height: 1.8;
+}
+.footer-links a {
+  color: var(--lb-pink);
+  font-weight: 800;
+  text-decoration: none;
+}
+.muted-link {
+  color: var(--lb-muted) !important;
+  font-weight: 600 !important;
+  text-decoration: underline;
+}
+
+/* Simple Auth Page (Register) - No Hero Image */
+.auth-page-simple {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #123A8F, #3E7BD6);
+  padding: 20px;
+}
