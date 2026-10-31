@@ -271,117 +271,130 @@ input:checked + .slider-admin:before { transform: translateX(20px); }
   .bottom-nav { max-width: 800px; margin: 0 auto; border-radius: 16px 16px 0 0; }
 }
 /* =========================================
-   MODERN AUTH PAGES (LOGIN / REGISTER)
+   MODERN AUTH PAGES (FLOATING CARD STYLE)
    ========================================= */
 
-/* Container for pages with Hero Image */
-.auth-page {
+/* Main Container: Holds both layers */
+.auth-layout-container {
+  position: relative;
+  width: 100%;
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: center; /* Vertically centers the card */
   justify-content: center;
-  position: relative;
-  background-color: #f0f9ff; /* Light blue fallback */
-  overflow-x: hidden;
-}
-
-/* Background Image Layer */
-.auth-hero-bg {
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 50%; /* Covers top half */
-  z-index: 0;
+  background-color: #f0f9ff; /* Fallback color behind image */
   overflow: hidden;
 }
-.auth-hero-bg img {
+
+/* Layer 1: The Background Image */
+.auth-bg-image-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%; /* Covers entire screen */
+  z-index: 1; /* Behind the card */
+  pointer-events: none; /* Allows clicking through if needed */
+}
+
+.auth-bg-image-layer img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: cover; /* Crops image to fill screen nicely */
   object-position: center;
-  opacity: 0.9;
+  opacity: 0.85; /* Slightly dimmed so text is readable */
 }
 
-/* Gradient Overlay to blend image into bg */
-.auth-hero-bg::after {
+/* Optional: Gradient Overlay to help contrast */
+.auth-bg-image-layer::after {
   content: '';
   position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 100px;
-  background: linear-gradient(to bottom, transparent, #f0f9ff);
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(240, 249, 255, 1), transparent);
 }
 
-/* The White Card */
-.auth-card-modern {
+/* Layer 2: The Floating Card */
+.auth-floating-card {
   position: relative;
-  z-index: 10;
+  z-index: 10; /* Above the image */
   background: #ffffff;
   border-radius: 24px;
   padding: 32px 24px;
-  box-shadow: 0 20px 40px -10px rgba(0,0,0,.15);
+  box-shadow: 0 20px 50px -10px rgba(0,0,0,.2); /* Stronger shadow for depth */
   width: 90%;
-  max-width: 400px;
-  margin-top: auto; /* Pushes it down slightly if needed */
-  margin-bottom: 40px;
+  max-width: 420px; /* Wider than before to accommodate inputs */
+  margin: 20px; /* Breathing room on mobile */
+  animation: slideUpFade 0.6s ease-out forwards;
 }
 
-.auth-card-modern h1 {
-  font-size: 24px;
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-floating-card h1 {
+  font-size: 26px;
   font-weight: 800;
   color: var(--lb-navy);
   text-align: center;
   margin-bottom: 8px;
 }
-.auth-card-modern .sub {
+.auth-floating-card .sub {
   font-size: 14px;
   color: var(--lb-muted);
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
-/* Input Groups */
+/* Input Groups (Reused from previous logic but tweaked spacing) */
 .input-group-wrapper {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .input-group-wrapper label {
   display: block;
   font-size: 13px;
   font-weight: 700;
   color: var(--lb-text);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
-/* Row Layout for Prefix + Input */
 .input-box-row {
   display: flex;
   align-items: center;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 14px; /* Slightly more rounded */
   transition: all 0.2s ease;
+  height: 52px; /* Fixed height for consistency */
 }
 .input-box-row:focus-within {
   border-color: var(--lb-pink);
-  box-shadow: 0 0 0 3px rgba(255, 77, 141, 0.1);
+  box-shadow: 0 0 0 4px rgba(255, 77, 141, 0.1);
   background: #fff;
 }
 
 .prefix-flag {
-  padding: 0 12px;
-  font-size: 14px;
+  padding: 0 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--lb-navy);
   white-space: nowrap;
   border-right: 1px solid #e2e8f0;
-  height: 48px;
+  height: 100%;
   display: flex;
   align-items: center;
+  background: #f1f5f9; /* Subtle bg for prefix area */
+  border-radius: 14px 0 0 14px;
 }
 
 .icon-left {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   fill: #94a3b8;
-  margin-left: 12px;
+  margin-left: 14px;
   flex-shrink: 0;
 }
 
@@ -389,66 +402,51 @@ input:checked + .slider-admin:before { transform: translateX(20px); }
   flex: 1;
   border: none;
   background: transparent;
-  padding: 12px;
+  padding: 0 14px;
   font-size: 15px;
   font-weight: 600;
   color: var(--lb-text);
   outline: none;
-  height: 48px;
+  height: 100%;
 }
 
 .toggle-pass {
   background: none;
   border: none;
   color: var(--lb-pink);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
-  padding: 0 12px;
+  padding: 0 16px;
   cursor: pointer;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 
-/* Standalone Inputs (No prefix) */
-.standalone-input {
-  width: 100%;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px 16px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--lb-text);
-  outline: none;
-  transition: all 0.2s ease;
-}
-.standalone-input:focus {
-  border-color: var(--lb-pink);
-  box-shadow: 0 0 0 3px rgba(255, 77, 141, 0.1);
-  background: #fff;
-}
-
-/* Buttons */
 .btn-signin-full {
   width: 100%;
-  padding: 14px;
+  padding: 16px;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   background: linear-gradient(90deg, #FF4D8D, #123A8F);
   color: #fff;
   font-size: 16px;
   font-weight: 800;
   cursor: pointer;
-  margin-top: 8px;
-  box-shadow: 0 4px 12px rgba(18, 58, 143, 0.3);
-  transition: transform 0.1s;
+  margin-top: 12px;
+  box-shadow: 0 8px 20px rgba(18, 58, 143, 0.3);
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+.btn-signin-full:hover {
+  box-shadow: 0 10px 25px rgba(18, 58, 143, 0.4);
 }
 .btn-signin-full:active { transform: scale(0.98); }
 .btn-signin-full:disabled { opacity: 0.7; cursor: not-allowed; }
 
-/* Footer Links */
 .footer-links {
   text-align: center;
   margin-top: 24px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--lb-muted);
   line-height: 1.8;
 }
@@ -463,12 +461,14 @@ input:checked + .slider-admin:before { transform: translateX(20px); }
   text-decoration: underline;
 }
 
-/* Simple Auth Page (Register) - No Hero Image */
-.auth-page-simple {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #123A8F, #3E7BD6);
-  padding: 20px;
+.alert-error {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-align: center;
+  border: 1px solid #fecaca;
 }
