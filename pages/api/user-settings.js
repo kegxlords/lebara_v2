@@ -135,26 +135,45 @@ export default async function handler(req, res) {
 
         // --- ACTION: DAILY SIGN-IN (NEW FEATURE) ---
         if (type === 'daily-sign') {
-            const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-            
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            const requestedDay = Number(body.day);
+
             try {
-                // 1. Check if already signed in today
-                // We look for a transaction of type 'sign_bonus' created TODAY for this user
-                const { data: existingSign } = await supabaseAdmin
+                const { data: recentSigns, error: signError } = await supabaseAdmin
                     .from('transactions')
-                    .select('id')
+                    .select('created_at, amount')
                     .eq('user_id', user.id)
                     .eq('type', 'sign_bonus')
-                    .gte('created_at', `${todayStr}T00:00:00Z`) // Start of today UTC
-                    .lte('created_at', `${todayStr}T23:59:59Z`) // End of today UTC
-                    .single();
+                    .order('created_at', { ascending: false })
+                    .limit(31);
 
-                if (existingSign) {
+                if (signError) throw signError;
+                const signs = recentSigns || [];
+                if (signs.some((sign) => sign.created_at?.slice(0, 10) === todayStr)) {
                     return res.status(400).json({ error: 'You have already claimed your daily bonus.' });
                 }
 
-                // 2. Define Bonus Amount (Configurable via Settings table ideally, hardcoded here for demo)
-                const BONUS_AMOUNT = 50.00; 
+                let streak = 0;
+                if (signs.length) {
+                    const latestDate = signs[0].created_at.slice(0, 10);
+                    const gap = Math.round((today - new Date(`${latestDate}T00:00:00Z`)) / 86400000);
+                    if (gap === 1) {
+                        streak = 1;
+                        for (let i = 1; i < signs.length; i += 1) {
+                            const previous = new Date(`${signs[i - 1].created_at.slice(0, 10)}T00:00:00Z`);
+                            const current = new Date(`${signs[i].created_at.slice(0, 10)}T00:00:00Z`);
+                            if (Math.round((previous - current) / 86400000) !== 1) break;
+                            streak += 1;
+                        }
+                    }
+                }
+
+                const day = Math.min(30, streak + 1);
+                if (Number.isFinite(requestedDay) && requestedDay !== day) {
+                    return res.status(409).json({ error: `Your next reward is day ${day}. Refresh the page and try again.`, day });
+                }
+                const BONUS_AMOUNT = day <= 7 ? 50 : day <= 21 ? 100 : 200;
 
                 // 3. Credit Wallet Atomically using RPC
                 // Ensure you have this RPC function in Supabase SQL Editor:
@@ -179,11 +198,7 @@ export default async function handler(req, res) {
                     p_type: 'sign_bonus'
                 });
 
-                return res.status(200).json({ 
-                    success: true, 
-                    message: `Success! You earned ₦${BONUS_AMOUNT}`,
-                    amount: BONUS_AMOUNT
-                });
+                return res.status(200).json({ success: true, message: `Success! You earned ₦${BONUS_AMOUNT}`, amount: BONUS_AMOUNT, day });
 
             } catch (err) {
                 console.error("Sign-in Error:", err);
