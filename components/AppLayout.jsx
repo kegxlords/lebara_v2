@@ -52,10 +52,7 @@ export default function AppLayout({ children, title = '' }) {
     <div className="app-shell premium-shell">
       <header className="top-bar premium-topbar">
         <Link href="/dashboard" className="brand premium-brand"><span className="brand-mark">L</span> LEBARA</Link>
-        <div className="top-actions">
-          <Link href="/recharge" className="wallet-pill premium-wallet">₦{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<small>Balance</small></Link>
-          <Link href="/support" className="premium-message" aria-label="Customer service">◌</Link>
-        </div>
+        <Link href="/recharge" className="wallet-pill premium-wallet">₦{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<small>Balance</small></Link>
       </header>
 
       <main className="content-area premium-content">
