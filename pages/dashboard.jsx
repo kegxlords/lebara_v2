@@ -80,7 +80,7 @@ export default function Dashboard() {
             <div className="icon-circle gold"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
             <span>VIP</span>
           </Link>
-          <Link href="/invite" className="grid-item">
+          <Link href="/team" className="grid-item">
             <div className="icon-circle magenta"><svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
             <span>Invite</span>
           </Link>
@@ -88,7 +88,7 @@ export default function Dashboard() {
             <div className="icon-circle cyan"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></div>
             <span>Download</span>
           </Link>
-          <Link href="/support" className="grid-item">
+          <Link href="/profile" className="grid-item">
             <div className="icon-circle navy"><svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9v7c0 1.1.9 2 2 2h4v-8H5v-1c0-3.87 3.13-7 7-7s7 3.13 7 7v1h-4v8h4c1.1 0 2-.9 2-2v-7c0-4.97-4.03-9-9-9z"/></svg></div>
             <span>Service</span>
           </Link>
