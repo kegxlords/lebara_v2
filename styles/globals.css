@@ -472,3 +472,64 @@ input:checked + .slider-admin:before { transform: translateX(20px); }
   text-align: center;
   border: 1px solid #fecaca;
 }
+
+
+/* =========================================
+   11. MOBILE LEBARA HOME + PROFILE REDESIGN
+   ========================================= */
+.top-actions { display: flex; align-items: center; gap: 10px; }
+.message-btn { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.25); border-radius: 50%; color: #fff; background: rgba(255,255,255,.12); }
+.message-btn svg { width: 21px; height: 21px; fill: currentColor; }
+.dashboard-hero { margin: 20px 16px 0; height: 255px; border-radius: 24px; background: linear-gradient(135deg, #2526df 10%, #2d45e9 55%, #2633d7); display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 12px 25px rgba(37,38,223,.18); }
+.hero-logo-card { width: 72%; height: 178px; border-radius: 25px; background: #fff; display: grid; place-items: center; box-shadow: 0 14px 22px rgba(0,0,0,.2); }
+.hero-logo-card span { color: #2b2ed8; font-size: 35px; font-weight: 950; letter-spacing: -2px; }
+.hero-dots { display: flex; align-items: center; gap: 9px; margin-top: 16px; }
+.hero-dots i, .hero-dots b { display: block; width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.55); }
+.hero-dots b { width: 27px; border-radius: 99px; background: #fff; }
+.deposit-ticker { margin: 18px 16px 0; height: 46px; border: 1px solid #e2e8f0; border-radius: 99px; background: #fff; display: flex; align-items: center; gap: 10px; overflow: hidden; white-space: nowrap; color: #64748b; font-size: 12px; font-weight: 700; }
+.deposit-ticker > span:first-child { color: #e14a83; font-size: 16px; padding-left: 2px; }
+.deposit-ticker > span:last-child { margin-left: 18px; }
+.deposit-ticker b { color: #344054; font-size: 12px; }
+.deposit-ticker em { color: #e24583; font-style: normal; }
+.shortcut-panel { margin: 22px 16px 0; padding: 18px 10px 20px; border: 1px solid #e3e8ef; border-radius: 25px; background: #fff; display: grid; grid-template-columns: repeat(4, 1fr); gap: 19px 8px; box-shadow: 0 7px 18px rgba(15,23,42,.04); }
+.shortcut { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #182234; font-size: 12px; font-weight: 800; text-align: center; }
+.shortcut-icon { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 50%; color: #fff; font-size: 31px; font-weight: 800; box-shadow: inset 0 -6px 13px rgba(0,0,0,.12), 0 5px 10px rgba(0,0,0,.08); }
+.shortcut-icon.shortcut-red { background: linear-gradient(145deg,#ff3f36,#ff9340); }
+.shortcut-icon.shortcut-blue { background: linear-gradient(145deg,#1a4e98,#83b9ff); }
+.shortcut-icon.shortcut-orange { background: linear-gradient(145deg,#ff9d00,#f75b56); }
+.shortcut-icon.shortcut-purple { background: linear-gradient(145deg,#bd3e8a,#5e49ad); }
+.shortcut-icon.shortcut-pink { background: linear-gradient(145deg,#ff683b,#ef417f); }
+.shortcut-icon.shortcut-magenta { background: linear-gradient(145deg,#e343a6,#4f2c93); }
+.shortcut-icon.shortcut-sky { background: linear-gradient(145deg,#2271bc,#73b7fa); }
+.shortcut-icon.shortcut-navy { background: linear-gradient(145deg,#315fc5,#163f92); }
+.dashboard-summary { margin: 18px 16px 12px; padding: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; border-radius: 18px; background: #fff; border: 1px solid #e2e8f0; }
+.dashboard-summary div { min-width: 0; }
+.dashboard-summary span { display: block; color: #64748b; font-size: 9px; font-weight: 800; line-height: 1.25; }
+.dashboard-summary b { display: block; margin-top: 5px; color: #193c91; font-size: 13px; white-space: nowrap; }
+.dashboard-loading { padding: 70px 20px; }
+.dashboard-error { margin: 20px 16px; }
+.profile-hero { margin: 20px 16px 0; padding: 22px 18px; display: flex; align-items: center; gap: 14px; border-radius: 23px; color: #fff; background: linear-gradient(135deg,#123a8f,#3e7bd6); box-shadow: 0 12px 24px rgba(18,58,143,.2); }
+.profile-avatar { width: 64px; height: 64px; flex: 0 0 64px; display: grid; place-items: center; border-radius: 50%; background: #fff; color: #1c42a0; font-size: 27px; font-weight: 900; }
+.profile-hero h1 { font-size: 19px; line-height: 1.15; }
+.profile-hero p { margin-top: 5px; color: rgba(255,255,255,.82); font-size: 12px; font-weight: 700; }
+.profile-balance { margin: 15px 16px 0; padding: 17px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-radius: 18px; background: #fff; border: 1px solid #e2e8f0; }
+.profile-balance div + div { padding-left: 12px; border-left: 1px solid #e8edf3; }
+.profile-balance span, .profile-code span { display: block; color: #64748b; font-size: 10px; font-weight: 800; }
+.profile-balance b { display: block; margin-top: 5px; color: #153b91; font-size: 17px; }
+.profile-code { margin: 13px 16px 0; padding: 14px 15px; display: flex; align-items: center; justify-content: space-between; border: 1px dashed #a7b5ce; border-radius: 15px; background: #f5f8ff; }
+.profile-code strong { display: block; margin-top: 4px; color: #183d91; font-size: 16px; letter-spacing: 1px; }
+.profile-code button { padding: 8px 13px; border-radius: 99px; color: #fff; background: #244bb0; font-size: 11px; font-weight: 800; }
+.profile-notice { margin: 10px 16px 0; padding: 9px 12px; border-radius: 10px; color: #166534; background: #f0fdf4; font-size: 11px; font-weight: 800; }
+.profile-section-title { margin-top: 24px; }
+.profile-menu { margin: 0 16px; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 18px; background: #fff; }
+.profile-menu-item { min-height: 69px; padding: 11px 13px; display: flex; align-items: center; gap: 11px; border-bottom: 1px solid #f0f3f7; }
+.profile-menu-item:last-child { border-bottom: none; }
+.profile-menu-item > div { flex: 1; min-width: 0; }
+.profile-menu-item b { display: block; color: #1e2d45; font-size: 13px; }
+.profile-menu-item small { display: block; margin-top: 4px; overflow: hidden; color: #7a8799; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.menu-icon { width: 35px; height: 35px; flex: 0 0 35px; display: grid; place-items: center; border-radius: 11px; color: #fff; font-size: 18px; font-weight: 900; }
+.menu-icon.blue { background: #3274d3; }.menu-icon.purple { background: #824fb8; }.menu-icon.orange { background: #ec8a36; }.menu-icon.green { background: #3ca47c; }
+.profile-menu-item > span:last-child { color: #8794a8; font-size: 18px; font-weight: 800; }
+.profile-menu-item .status-good { color: #1e9a61; font-size: 10px; }.profile-menu-item .status-warn { color: #dc8b23; font-size: 10px; }
+.profile-logout { width: calc(100% - 32px); margin: 20px 16px 12px; padding: 13px; border: 1px solid #ffd0dc; border-radius: 13px; color: #d43f6b; background: #fff5f7; font-size: 13px; font-weight: 800; }
+@media (min-width: 700px) { .app-shell { max-width: 540px; margin: 0 auto; box-shadow: 0 0 35px rgba(15,23,42,.08); } .bottom-nav { left: 50%; right: auto; width: 540px; transform: translateX(-50%); } }
