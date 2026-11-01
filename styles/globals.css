@@ -1072,3 +1072,16 @@ input:checked + .slider-admin:before { transform: translateX(20px); }
   color: var(--lb-muted);
   margin-top: 12px;
 }
+
+
+.alert-success {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  color: #166534;
+  background: #f0fdf4;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
