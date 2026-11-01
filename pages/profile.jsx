@@ -45,7 +45,7 @@ export default function ProfilePage() {
 
       } catch (err) {
         console.error(err);
-        router.push('/login');
+        router.push('/');
       } finally {
         setLoading(false);
       }
@@ -127,7 +127,7 @@ export default function ProfilePage() {
       <div className="service-list-section">
         <h3 className="section-heading">Application Service</h3>
         
-        <Link href="/gift-code" className="list-item-arrow">
+        <Link href="/recharge" className="list-item-arrow">
           <div className="item-left">
             <div className="icon-square orange"><svg viewBox="0 0 24 24"><path d="M20 6h-2.18c-.11-.31-.27-.59-.48-.84l1.42-1.42-1.42-1.42-1.42 1.42c-.25-.21-.53-.37-.84-.48V2h-2v1.82c-.31.11-.59.27-.84.48L8.84 2.9 7.42 4.32l1.42 1.42c-.21.25-.37.53-.48.84H4v2h2.18c.11.31.27.59.48.84L5.24 11.4l1.42 1.42 1.42-1.42c.25.21.53.37.84.48V16h2v-2.18c.31-.11.59-.27.84-.48l1.42 1.42 1.42-1.42-1.42-1.42c.21-.25.37-.53.48-.84H20V6zm-8 4c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg></div>
             <span>Gift Code</span>
