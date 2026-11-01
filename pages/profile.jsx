@@ -1,245 +1,80 @@
 import { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [banks, setBanks] = useState([]);
+  const [wallet, setWallet] = useState({ balance: 0, income_balance: 0 });
   const [loading, setLoading] = useState(true);
-  
-  // Bank Form State
-  const [showBankForm, setShowBankForm] = useState(false);
-  const [bankData, setBankData] = useState({ bankCode: '', accountNumber: '', accountName: '' });
-  const [bankError, setBankError] = useState('');
-
-  // PIN Modal State
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [pinInput, setPinInput] = useState('');
-  const [currentPin, setCurrentPin] = useState('');
-  const [isSettingNew, setIsSettingNew] = useState(false); // True if user has no PIN yet
-  const [pinError, setPinError] = useState('');
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchProfile() {
       try {
-        // Fetch User Info
-        const resUser = await fetch('/api/auth/me');
-        if (!resUser.ok) throw new Error('Not authenticated');
-        const dataUser = await resUser.json();
-        setUser(dataUser.user);
-        setIsSettingNew(!dataUser.user.has_pin);
-
-        // Fetch Banks
-        const resBanks = await fetch('/api/user/banks');
-        if (resBanks.ok) {
-          setBanks(await resBanks.json());
-        }
+        const res = await fetch('/api/auth');
+        if (!res.ok) throw new Error('Not authenticated');
+        const data = await res.json();
+        setUser(data.user);
+        setWallet(data.wallet || { balance: 0, income_balance: 0 });
       } catch (err) {
         console.error(err);
-        router.push('/login');
+        router.push('/');
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+    fetchProfile();
   }, [router]);
 
-  // --- Bank Handlers ---
-  const handleAddBank = async (e) => {
-    e.preventDefault();
-    setBankError('');
+  const copyReferral = async () => {
+    if (!user?.referral_code) return;
     try {
-      const res = await fetch('/api/user/banks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bankData),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
-      setBanks([...banks, data]);
-      setShowBankForm(false);
-      setBankData({ bankCode: '', accountNumber: '', accountName: '' });
-    } catch (err) {
-      setBankError(err.message);
+      await navigator.clipboard.writeText(user.referral_code);
+      setNotice('Referral code copied');
+    } catch {
+      setNotice('Copy is unavailable on this device');
     }
   };
 
-  const handleDeleteBank = async (id) => {
-    if (!confirm('Remove this bank account?')) return;
-    await fetch(`/api/user/banks?id=${id}`, { method: 'DELETE' });
-    setBanks(banks.filter(b => b.id !== id));
+  const logout = async () => {
+    await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'logout' }),
+    });
+    router.push('/');
   };
 
-  // --- PIN Handlers ---
-  const handleSavePin = async () => {
-    setPinError('');
-    if (pinInput.length < 4 || pinInput.length > 6) return setPinError('PIN must be 4-6 digits');
-    
-    try {
-      const res = await fetch('/api/auth/set-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          pin: pinInput, 
-          currentPin: isSettingNew ? null : currentPin 
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
-      alert('PIN saved successfully!');
-      setShowPinModal(false);
-      setPinInput('');
-      setCurrentPin('');
-      setUser({ ...user, has_pin: true });
-    } catch (err) {
-      setPinError(err.message);
-    }
-  };
-
-  if (loading) return <AppLayout>Loading...</AppLayout>;
+  if (loading) return <AppLayout><div className="empty-state dashboard-loading">Loading your profile...</div></AppLayout>;
 
   return (
-    <AppLayout title="My Profile">
-      {/* USER INFO CARD */}
-      <div className="card-form" style={{ marginBottom: '20px' }}>
-        <div className="flex gap-2" style={{ alignItems: 'center', marginBottom: '16px' }}>
-          <div className="avatar-lg" style={{ width: '50px', height: '50px', fontSize: '20px' }}>
-            {user.full_name?.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <h3 style={{ margin: 0 }}>{user.full_name}</h3>
-            <small className="muted">{user.phone}</small>
-          </div>
-        </div>
-        
-        <div className="fig-row"><span>Referral Code</span><b>{user.referral_code}</b></div>
-        <div className="fig-row"><span>Joined</span><b>{new Date(user.created_at).toLocaleDateString()}</b></div>
-      </div>
+    <AppLayout>
+      <section className="profile-hero">
+        <div className="profile-avatar">{user?.full_name?.charAt(0).toUpperCase() || 'M'}</div>
+        <div><h1>{user?.full_name || 'Lebara member'}</h1><p>{user?.phone || user?.email || 'Member account'}</p></div>
+      </section>
 
-      {/* SECURITY SECTION */}
-      <div className="section-title">Security</div>
-      <div className="list-container" style={{ marginBottom: '20px' }}>
-        <div className="list-item" onClick={() => setShowPinModal(true)} style={{ cursor: 'pointer' }}>
-          <div>
-            <strong>Withdrawal PIN</strong>
-            <small className="block muted">Required for all payouts</small>
-          </div>
-          <span className={user.has_pin ? 'amt-pos' : 'amt-neg'}>
-            {user.has_pin ? '✓ Set' : '✗ Not Set'}
-          </span>
-        </div>
-        <div className="list-item" onClick={() => router.push('/change-password')} style={{ cursor: 'pointer' }}>
-          <div>
-            <strong>Login Password</strong>
-            <small className="block muted">Change your login password</small>
-          </div>
-          <span>›</span>
-        </div>
-      </div>
+      <section className="profile-balance">
+        <div><span>Available balance</span><b>₦{(Number(wallet.balance) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></div>
+        <div><span>Income balance</span><b>₦{(Number(wallet.income_balance) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></div>
+      </section>
 
-      {/* BANK ACCOUNTS SECTION */}
-      <div className="section-title flex justify-between">
-        <span>Saved Banks</span>
-        <button className="btn-primary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => setShowBankForm(!showBankForm)}>
-          + Add Bank
-        </button>
-      </div>
+      <section className="profile-code">
+        <div><span>Referral code</span><strong>{user?.referral_code || '—'}</strong></div>
+        <button onClick={copyReferral}>Copy</button>
+      </section>
+      {notice && <div className="profile-notice" role="status">{notice}</div>}
 
-      {showBankForm && (
-        <div className="card-form" style={{ marginBottom: '16px', border: '1px solid var(--lb-pink)' }}>
-          <h4>Add New Bank Account</h4>
-          {bankError && <div className="msg error">{bankError}</div>}
-          <form onSubmit={handleAddBank}>
-            <div className="field">
-              <label>Select Bank</label>
-              <select 
-                className="input-large select-bank" 
-                value={bankData.bankCode} 
-                onChange={(e) => setBankData({...bankData, bankCode: e.target.value})}
-                required
-              >
-                <option value="">Choose a bank...</option>
-                {/* In real app, map NIGERIAN_BANKS array here */}
-                <option value="80000009">GTBank</option>
-                <option value="80000025">Zenith Bank</option>
-                <option value="80000030">OPay</option>
-              </select>
-            </div>
-            <div className="field">
-              <label>Account Number</label>
-              <input type="text" className="input-large" placeholder="10-digit number" 
-                value={bankData.accountNumber} 
-                onChange={(e) => setBankData({...bankData, accountNumber: e.target.value.replace(/\D/g,'')})}
-                maxLength="11" required />
-            </div>
-            <div className="field">
-              <label>Account Name</label>
-              <input type="text" className="input-large" placeholder="As on bank slip" 
-                value={bankData.accountName} 
-                onChange={(e) => setBankData({...bankData, accountName: e.target.value})}
-                required />
-            </div>
-            <button type="submit" className="btn-primary">Save Bank</button>
-          </form>
-        </div>
-      )}
+      <div className="section-title profile-section-title">Account</div>
+      <section className="profile-menu">
+        <div className="profile-menu-item"><span className="menu-icon blue">◉</span><div><b>Personal information</b><small>View your registered account details</small></div><span>›</span></div>
+        <div className="profile-menu-item"><span className="menu-icon purple">♙</span><div><b>Withdrawal PIN</b><small>{user?.has_pin ? 'PIN is set' : 'Set a PIN before withdrawing'}</small></div><span className={user?.has_pin ? 'status-good' : 'status-warn'}>{user?.has_pin ? 'Set' : 'Pending'}</span></div>
+        <div className="profile-menu-item"><span className="menu-icon orange">▣</span><div><b>Bank accounts</b><small>Manage your payout details</small></div><span>›</span></div>
+        <div className="profile-menu-item"><span className="menu-icon green">?</span><div><b>Help &amp; support</b><small>Get assistance with your account</small></div><span>›</span></div>
+      </section>
 
-      <div className="list-container">
-        {banks.length === 0 ? (
-          <div className="empty-state">No banks saved yet.</div>
-        ) : (
-          banks.map(bank => (
-            <div key={bank.id} className="list-item">
-              <div>
-                <strong>{bank.bank_name}</strong>
-                <small className="block muted">{bank.account_number} • {bank.account_name}</small>
-              </div>
-              <button className="icon-btn" style={{ color: 'var(--lb-red)' }} onClick={() => handleDeleteBank(bank.id)}>
-                ✕
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* LOGOUT BUTTON */}
-      <div style={{ marginTop: '30px', textAlign: 'center' }}>
-        <button className="btn-danger" onClick={async () => {
-          await fetch('/api/auth/logout', { method: 'POST' });
-          router.push('/login');
-        }}>Log Out</button>
-      </div>
-
-      {/* PIN MODAL */}
-      {showPinModal && (
-        <div className="pin-overlay">
-          <div className="pin-modal">
-            <h3>{isSettingNew ? 'Set Withdrawal PIN' : 'Change PIN'}</h3>
-            {!isSettingNew && (
-              <div className="field">
-                <label>Current PIN</label>
-                <input type="password" className="input-large" maxLength="6" 
-                  value={currentPin} onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g,''))} />
-              </div>
-            )}
-            <div className="field">
-              <label>New PIN (4-6 Digits)</label>
-              <input type="password" className="input-large" maxLength="6" autoFocus
-                value={pinInput} onChange={(e) => setPinInput(e.target.value.replace(/\D/g,''))} />
-            </div>
-            {pinError && <div className="msg error">{pinError}</div>}
-            
-            <div className="flex gap-2" style={{ marginTop: '16px' }}>
-              <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowPinModal(false)}>Cancel</button>
-              <button className="btn-primary" style={{ flex: 1 }} onClick={handleSavePin}>Save</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <button className="profile-logout" onClick={logout}>Log out</button>
     </AppLayout>
   );
 }
