@@ -1,21 +1,84 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import Link from 'next/link';
 
 const whatsappGroupUrl = process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL || 'https://chat.whatsapp.com/';
-const actions = [
-  { href: '/sign', label: 'Daily sign-in', meta: 'Earn daily', icon: '✦', tone: 'violet' },
-  { href: '/team', label: 'My team', meta: 'Invite & earn', icon: '♧', tone: 'blue' },
-  { href: '/recharge', label: 'Add funds', meta: 'Fast & secure', icon: '＋', tone: 'orange' },
-  { href: '/withdraw', label: 'Withdraw', meta: 'Cash out', icon: '↗', tone: 'purple' },
-  { href: '/packages?vip=true', label: 'VIP plans', meta: 'Grow faster', icon: '♛', tone: 'gold' },
-  { href: '/download', label: 'Get the app', meta: 'On every device', icon: '↓', tone: 'cyan' },
+const fallbackBanners = [
+  { image_url: '', href: '/packages', alt: 'Explore Lebara plans' },
+  { image_url: '', href: '/recharge', alt: 'Add funds securely' },
+  { image_url: '', href: '/team', alt: 'Grow your team' }
 ];
+const actions = [
+  { href: '/sign', label: 'Sign', icon: '✦', tone: 'orange' },
+  { href: '/team', label: 'My team', icon: '♧', tone: 'blue' },
+  { href: '/recharge', label: 'Recharge', icon: '▭', tone: 'coral' },
+  { href: '/withdraw', label: 'Withdraw', icon: '↘', tone: 'purple' },
+  { href: '/packages?vip=true', label: 'VIP', icon: '♛', tone: 'orange' },
+  { href: '/team', label: 'Invite', icon: '♧', tone: 'pink' },
+  { href: '/download', label: 'Download', icon: '↓', tone: 'blue' },
+  { href: '/support', label: 'Service', icon: '♧', tone: 'navy' }
+];
+
+function money(value) { return `₦${Number(value || 0).toLocaleString()}`; }
+
 export default function Dashboard() {
-  const [account, setAccount] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [showWelcome, setShowWelcome] = useState(false);
-  useEffect(() => { let mounted = true; fetch('/api/auth').then((res) => { if (!res.ok) throw new Error('Unable to load your account'); return res.json(); }).then((data) => { if (mounted) { setAccount(data); setShowWelcome(true); } }).catch((err) => mounted && setError(err.message)).finally(() => mounted && setLoading(false)); return () => { mounted = false; }; }, []);
+  const [account, setAccount] = useState(null);
+  const [banners, setBanners] = useState(fallbackBanners);
+  const [notifications, setNotifications] = useState([]);
+  const [slide, setSlide] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([fetch('/api/auth'), fetch('/api/public-settings')])
+      .then(async ([authRes, contentRes]) => {
+        if (!authRes.ok) throw new Error('Unable to load your account');
+        const auth = await authRes.json();
+        const content = contentRes.ok ? await contentRes.json() : {};
+        if (mounted) {
+          setAccount(auth);
+          setBanners(Array.isArray(content.banners) && content.banners.length ? content.banners : fallbackBanners);
+          setNotifications(Array.isArray(content.notifications) ? content.notifications : []);
+          setShowWelcome(true);
+        }
+      })
+      .catch((err) => mounted && setError(err.message))
+      .finally(() => mounted && setLoading(false));
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (banners.length < 2) return undefined;
+    const timer = setInterval(() => setSlide((current) => (current + 1) % banners.length), 4500);
+    return () => clearInterval(timer);
+  }, [banners.length]);
+
+  const ticker = useMemo(() => notifications.length ? [...notifications, ...notifications] : [{ text: 'Welcome to Lebara', amount: 'Explore your rewards' }, { text: 'Daily rewards are available', amount: 'Claim today' }], [notifications]);
+  const user = account?.user || {};
+  const wallet = account?.wallet || {};
+
   if (loading) return <AppLayout><div className="premium-inline-loader">Loading your dashboard...</div></AppLayout>;
   if (error) return <AppLayout><div className="premium-error"><b>We could not load your account</b><span>{error}</span><button onClick={() => window.location.reload()}>Try again</button></div></AppLayout>;
-  const user = account?.user || {}; const wallet = account?.wallet || {}; const stats = account?.stats || {}; const firstName = user.full_name?.split(' ')[0] || 'Member';
-  return <AppLayout><section className="premium-greeting"><div><span className="eyebrow">WELCOME BACK</span><h1>Hi, {firstName} <span>✦</span></h1><p>Everything you need, all in one place.</p></div><div className="profile-chip">{firstName.charAt(0).toUpperCase()}</div></section><section className="premium-balance-card"><div className="balance-card-top"><span>Total available balance</span><Link href="/history">View history ›</Link></div><strong>₦{(Number(wallet.balance) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong><div className="balance-card-bottom"><span>Income balance</span><b>₦{(Number(wallet.income_balance) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b><Link href="/recharge">＋ Add funds</Link></div></section><section className="premium-promo"><div><span className="eyebrow">MEMBER BENEFIT</span><h2>Grow your rewards</h2><p>Invite friends and unlock higher VIP earnings.</p><Link href="/team">Explore team rewards <span>→</span></Link></div><div className="promo-orb">✦</div></section><div className="premium-section-heading"><div><span className="eyebrow">QUICK ACCESS</span><h2>What would you like to do?</h2></div><Link href="/support">Help ›</Link></div><section className="premium-action-grid">{actions.map((action) => <Link href={action.href} key={action.label} className="premium-action"><span className={`action-icon ${action.tone}`}>{action.icon}</span><b>{action.label}</b><small>{action.meta}</small></Link>)}</section><section className="premium-stats-row"><div><b>{stats.activePackages || 0}</b><span>Active plans</span></div><div><b>{user.referral_code || '—'}</b><span>Referral code</span></div><div><b>VIP {stats.vipLevel || 0}</b><span>Current level</span></div></section><Link href="/gift-code" className="floating-gift-button" aria-label="Redeem gift code"><span>✉</span><i>✦</i></Link>{showWelcome && <div className="premium-modal-backdrop" role="dialog" aria-modal="true"><div className="premium-modal"><button className="modal-close" onClick={() => setShowWelcome(false)} aria-label="Close">×</button><div className="modal-sparkle">✦</div><span className="eyebrow">LEBARA MEMBER UPDATE</span><h2>Welcome to your premium space</h2><p>Stay consistent, collect daily rewards, and unlock more value from your account.</p><Link href="/sign" className="modal-primary" onClick={() => setShowWelcome(false)}>View daily rewards →</Link><a href={whatsappGroupUrl} target="_blank" rel="noreferrer" className="modal-whatsapp" onClick={() => setShowWelcome(false)}><span>◉</span> Join the WhatsApp group ↗</a><button className="modal-secondary" onClick={() => setShowWelcome(false)}>Maybe later</button></div></div>}</AppLayout>;
+
+  return <AppLayout>
+    <section className="reference-banner-wrap">
+      <div className="reference-banner-track" style={{ transform: `translateX(-${slide * 100}%)` }}>
+        {banners.map((banner, index) => <Link href={banner.href || '/packages'} key={`${banner.href}-${index}`} className="reference-banner">
+          {banner.image_url ? <img src={banner.image_url} alt={banner.alt || 'Lebara promotion'} /> : <div className={`reference-banner-fallback banner-fallback-${index % 3}`}><strong>LEBARA</strong><span>{index === 0 ? 'Better rewards, brighter days' : index === 1 ? 'Recharge with confidence' : 'Grow together with Lebara'}</span></div>}
+        </Link>)}
+      </div>
+      <div className="reference-dots">{banners.map((_, index) => <button type="button" key={index} className={index === slide ? 'active' : ''} onClick={() => setSlide(index)} aria-label={`Show banner ${index + 1}`} />)}</div>
+    </section>
+
+    <section className="reference-ticker" aria-label="Recent activity"><div className="reference-ticker-track">{ticker.map((item, index) => <span key={`${item.created_at || ''}-${index}`}><b>{item.text}</b> <strong>{item.amount || money(item.value)}</strong></span>)}</div></section>
+
+    <section className="reference-action-card">{actions.map((action) => <Link href={action.href} key={action.label} className="reference-action"><span className={`reference-action-icon ${action.tone}`}>{action.icon}</span><b>{action.label}</b></Link>)}</section>
+
+    <section className="reference-wallet-strip"><div><small>Available balance</small><strong>{money(wallet.balance)}</strong></div><div><small>Income balance</small><strong>{money(wallet.income_balance)}</strong></div><Link href="/history">History ›</Link></section>
+
+    <Link href="/gift-code" className="floating-gift-button" aria-label="Redeem gift code"><span>✉</span><i>✦</i></Link>
+    {showWelcome && <div className="premium-modal-backdrop" role="dialog" aria-modal="true"><div className="premium-modal"><button className="modal-close" onClick={() => setShowWelcome(false)} aria-label="Close">×</button><div className="modal-sparkle">✦</div><span className="eyebrow">LEBARA MEMBER UPDATE</span><h2>Welcome back{user.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}</h2><p>{notifications[0] ? `${notifications[0].text} ${notifications[0].amount || ''}. Keep your account active to unlock more rewards.` : 'Claim your daily reward and explore the latest Lebara opportunities.'}</p><Link href="/sign" className="modal-primary" onClick={() => setShowWelcome(false)}>View daily rewards →</Link><a href={whatsappGroupUrl} target="_blank" rel="noreferrer" className="modal-whatsapp" onClick={() => setShowWelcome(false)}><span>◉</span> Join the WhatsApp group ↗</a><button className="modal-secondary" onClick={() => setShowWelcome(false)}>Maybe later</button></div></div>}
+  </AppLayout>;
 }

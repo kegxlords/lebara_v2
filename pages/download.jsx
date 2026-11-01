@@ -3,11 +3,16 @@ import AppLayout from '../components/AppLayout';
 
 export default function DownloadPage() {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [downloadMessage, setDownloadMessage] = useState('');
 
   const triggerDownload = () => {
-    // In production, replace with actual APK URL
+    const apkUrl = process.env.NEXT_PUBLIC_ANDROID_APK_URL;
+    if (!apkUrl) {
+      setDownloadMessage('The Android download is not configured yet. Please contact customer service for the official app link.');
+      return;
+    }
     const link = document.createElement('a');
-    link.href = '/assets/lebara-app.apk'; 
+    link.href = apkUrl;
     link.download = 'Lebara_App_v1.0.apk';
     document.body.appendChild(link);
     link.click();
@@ -32,9 +37,8 @@ export default function DownloadPage() {
           <span className="badge-meta">🤖 Android 8.0+</span>
         </div>
 
-        <button className="btn-download-large-yellow" onClick={triggerDownload}>
-          ↓ Download APK
-        </button>
+        <button className="btn-download-large-yellow" onClick={triggerDownload}>↓ Download APK</button>
+        {downloadMessage && <p className="download-error" role="alert">{downloadMessage}</p>}
       </div>
 
       {/* INSTALLATION STEPS */}
