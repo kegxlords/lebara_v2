@@ -59,7 +59,7 @@ export default function DepositResult() {
             <div className="cross-icon-big">❌</div>
             <h2>Payment Failed</h2>
             <p>We could not verify this transaction. If funds were deducted, contact support.</p>
-            <Link href="/support" className="btn-outline-full">Contact Support</Link>
+            <Link href="/profile" className="btn-outline-full">Contact Support</Link>
           </>
         )}
       </div>
