@@ -1,176 +1,55 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
-import Link from 'next/link';
 
-// Helper to generate last 7 days labels
-function getLast7Days() {
-  const days = [];
-  const today = new Date();
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    days.push({
-      date: d.toISOString().split('T')[0],
-      label: d.toLocaleDateString('en-US', { weekday: 'short' }), // Mon, Tue...
-      dayNum: d.getDate()
-    });
-  }
-  return days;
+const STORAGE_KEY = 'lebara_daily_reward_v2';
+const rewardForDay = (day) => (day <= 7 ? 50 : day <= 21 ? 100 : 200);
+const dateKey = (date = new Date()) => date.toISOString().slice(0, 10);
+const daysBetween = (from, to) => Math.round((new Date(to) - new Date(from)) / 86400000);
+
+function readRewardState() {
+  if (typeof window === 'undefined') return { streak: 0, lastDate: '', completed: [] };
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    const state = { streak: Number(saved.streak) || 0, lastDate: saved.lastDate || '', completed: Array.isArray(saved.completed) ? saved.completed : [] };
+    const gap = state.lastDate ? daysBetween(state.lastDate, dateKey()) : 0;
+    if (gap > 1) return { streak: 0, lastDate: '', completed: [] };
+    return state;
+  } catch { return { streak: 0, lastDate: '', completed: [] }; }
 }
 
 export default function SignInPage() {
-  const [loading, setLoading] = useState(true);
-  const [signedInToday, setSignedInToday] = useState(false);
-  const [streak, setStreak] = useState(0);
+  const [state, setState] = useState({ streak: 0, lastDate: '', completed: [] });
+  const [ready, setReady] = useState(false);
+  const [claiming, setClaiming] = useState(false);
   const [message, setMessage] = useState('');
-  const [history, setHistory] = useState([]); // Array of dates signed in
-  
-  // Generate calendar grid
-  const weekDays = getLast7Days();
 
-  useEffect(() => {
-    checkStatus();
-  }, []);
+  useEffect(() => { setState(readRewardState()); setReady(true); }, []);
+  const signedToday = state.lastDate === dateKey();
+  const currentDay = state.streak >= 30 ? 30 : Math.max(1, state.streak + (signedToday ? 0 : 1));
+  const monthProgress = Math.min(100, (state.streak / 30) * 100);
+  const calendar = useMemo(() => Array.from({ length: 30 }, (_, index) => index + 1), []);
 
-  const checkStatus = async () => {
+  async function handleClaim() {
+    if (!ready || claiming || signedToday || state.streak >= 30) return;
+    const day = currentDay;
+    setClaiming(true); setMessage('');
     try {
-      // In a real app, fetch stats from /api/auth or a dedicated endpoint
-      // For this demo, we simulate checking local storage or API response structure
-      // Assuming /api/auth returns { stats: { signStreak: X, lastSignDate: Y } }
-      
-      const res = await fetch('/api/auth');
-      if(res.ok) {
-         const data = await res.json();
-         // Mock logic: If API doesn't return streak yet, fallback to local storage for UI feel
-         const storedStreak = parseInt(localStorage.getItem('lebara_sign_streak') || '0');
-         const storedLastDate = localStorage.getItem('lebara_sign_date');
-         
-         const todayStr = new Date().toDateString();
-         const isSigned = storedLastDate === todayStr;
-         
-         setSignedInToday(isSigned);
-         setStreak(storedStreak);
-         
-         // Simulate history based on streak for visual effect
-         const histDates = [];
-         let curr = new Date();
-         for(let i=0; i<storedStreak; i++) {
-             histDates.unshift(curr.toISOString().split('T')[0]);
-             curr.setDate(curr.getDate()-1);
-         }
-         setHistory(histDates);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignIn = async () => {
-    if (signedInToday) return;
-
-    setLoading(true);
-    setMessage('');
-    
-    try {
-      const res = await fetch('/api/user-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'daily-sign' })
-      });
-
+      const res = await fetch('/api/user-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'daily-sign', day }) });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not claim today’s reward');
+      const next = { streak: day, lastDate: dateKey(), completed: [...new Set([...state.completed, day])] };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      setState(next);
+      setMessage(`Reward claimed: ₦${Number(data.amount || rewardForDay(day)).toLocaleString()} added to your income balance.`);
+    } catch (error) { setMessage(error.message); } finally { setClaiming(false); }
+  }
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to sign in');
-      }
-
-      // Success
-      const todayStr = new Date().toDateString();
-      const newStreak = streak + 1;
-      
-      // Save to LocalStorage for instant UI feedback (Real persistence is in DB)
-      localStorage.setItem('lebara_sign_streak', newStreak.toString());
-      localStorage.setItem('lebara_sign_date', todayStr);
-      
-      setStreak(newStreak);
-      setSignedInToday(true);
-      setMessage(`🎉 Bonus Claimed! +₦50 added to wallet.`);
-      
-      // Refresh history array
-      const newHist = [...history, new Date().toISOString().split('T')[0]];
-      setHistory(newHist.slice(-7)); // Keep last 7
-
-    } catch (err) {
-      setMessage(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <AppLayout title="Daily Check-in">
-      
-      {/* HERO CARD */}
-      <div className="signin-hero-card">
-        <div className="hero-icon">🔥</div>
-        <h2>Daily Rewards</h2>
-        <p>Sign in every day to build your streak and earn bonuses.</p>
-        
-        <div className="streak-display">
-          <span className="streak-num">{streak}</span>
-          <span className="streak-label">Day Streak</span>
-        </div>
-      </div>
-
-      {/* CALENDAR GRID */}
-      <div className="calendar-container">
-        <h3>This Week</h3>
-        <div className="week-grid">
-          {weekDays.map((day, idx) => {
-            const isPastOrToday = day.date <= new Date().toISOString().split('T')[0];
-            const hasCheckedIn = history.includes(day.date);
-            const isToday = day.date === new Date().toISOString().split('T')[0];
-            
-            let circleClass = 'cal-circle empty';
-            if (hasCheckedIn) circleClass = 'cal-circle filled';
-            else if (isToday && !signedInToday) circleClass = 'cal-circle active-pulse';
-            else if (isToday && signedInToday) circleClass = 'cal-circle filled';
-
-            return (
-              <div key={idx} className="cal-item">
-                <span className="cal-day-name">{day.label}</span>
-                <div className={circleClass}>
-                  {hasCheckedIn ? '✓' : day.dayNum}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ACTION AREA */}
-      <div className="action-area">
-        {message && (
-          <div className={`msg-box ${message.includes('Bonus') ? 'success' : 'error'}`}>
-            {message}
-          </div>
-        )}
-
-        <button 
-          className={`btn-signin-main ${signedInToday ? 'disabled' : ''}`}
-          onClick={handleSignIn}
-          disabled={signedInToday || loading}
-        >
-          {loading ? 'Processing...' : (signedInToday ? '✓ Signed In Today' : 'Claim Daily Bonus')}
-        </button>
-        
-        {!signedInToday && (
-           <p className="hint-text">Come back tomorrow for another chance!</p>
-        )}
-      </div>
-
-    </AppLayout>
-  );
+  return <AppLayout title="Daily rewards">
+    <section className="signin-premium-hero"><div className="reward-icon">✦</div><div><span className="eyebrow">CONSISTENCY PAYS</span><h1>Daily rewards</h1><p>Show up every day and unlock bigger bonuses.</p></div><div className="streak-pill"><b>{state.streak}</b><span>day streak</span></div></section>
+    <section className="reward-rules"><div><b>₦50</b><span>Days 1–7</span></div><div><b>₦100</b><span>Days 8–21</span></div><div><b>₦200</b><span>Days 22–30</span></div></section>
+    <section className="calendar-card"><div className="calendar-heading"><div><span className="eyebrow">30-DAY JOURNEY</span><h2>Complete your month</h2></div><strong>{state.streak}/30</strong></div><div className="calendar-progress"><span style={{ width: `${monthProgress}%` }} /></div><div className="reward-calendar">{calendar.map((day) => { const complete = state.completed.includes(day); const active = day === currentDay && !signedToday; return <div key={day} className={`reward-day ${complete ? 'complete' : ''} ${active ? 'active' : ''}`}><span>DAY</span><b>{day}</b><small>{complete ? '✓' : `₦${rewardForDay(day)}`}</small></div>; })}</div></section>
+    {message && <div className={`reward-message ${message.startsWith('Reward') ? 'success' : 'error'}`}>{message}</div>}
+    <button className="premium-claim-button" onClick={handleClaim} disabled={!ready || claiming || signedToday || state.streak >= 30}>{claiming ? 'Securing your reward…' : signedToday ? '✓ Claimed today' : state.streak >= 30 ? '30-day journey complete' : `Claim day ${currentDay} · ₦${rewardForDay(currentDay)}`}</button>
+    {!signedToday && state.streak > 0 && <p className="reward-hint">Miss one day and your 30-day journey resets. Come back tomorrow to keep your streak alive.</p>}
+  </AppLayout>;
 }
