@@ -9,6 +9,7 @@ export default async function handler(req, res) {
         const { data, error } = await supabaseAdmin
             .from('packages')
             .select('*')
+            .eq('is_active', true)
             .order('category', { ascending: true })
             .order('price', { ascending: true });
         
@@ -36,7 +37,7 @@ export default async function handler(req, res) {
             }
 
             // 3. Atomic Purchase via RPC
-            await supabaseAdmin.rpc('buy_package', {
+            const purchaseResult = await supabaseAdmin.rpc('buy_package', {
                 p_user_id: user.id,
                 p_pkg_id: pkg.id,
                 p_price: pkg.price,
@@ -44,17 +45,7 @@ export default async function handler(req, res) {
                 p_total: pkg.total_income,
                 p_days: pkg.days
             });
-
-            // 4. Log Transaction
-            await supabaseAdmin.from('transactions').insert({
-                user_id: user.id,
-                type: 'purchase',
-                direction: 'debit',
-                amount: pkg.price,
-                balance_after: parseFloat(wallet.balance) - parseFloat(pkg.price),
-                reference: 'buy_' + Date.now(),
-                meta: JSON.stringify({ package_name: pkg.name })
-            });
+            if (purchaseResult.error) throw purchaseResult.error;
 
             res.status(200).json({ success: true });
 

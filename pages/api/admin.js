@@ -1,11 +1,14 @@
 import { supabaseAdmin } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 
-// NOTE: Ensure requireAuth checks for isAdmin flag in production
 export default async function handler(req, res) {
     const user = requireAuth(req, res);
     if (!user) return;
-    // TODO: Add strict admin check here
+    const { data: adminUser, error: adminError } = await supabaseAdmin
+        .from('users').select('is_admin, role').eq('id', user.id).maybeSingle();
+    if (adminError || !adminUser || (!adminUser.is_admin && adminUser.role !== 'admin')) {
+        return res.status(403).json({ error: 'Administrator access required' });
+    }
 
     const method = req.method;
     const { section, action, ...body } = req.body || req.query;

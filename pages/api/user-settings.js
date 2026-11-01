@@ -192,11 +192,43 @@ export default async function handler(req, res) {
                 $$ LANGUAGE plpgsql SECURITY DEFINER;
                 */
 
-                await supabaseAdmin.rpc('credit_wallet', {
+                const creditResult = await supabaseAdmin.rpc('credit_wallet', {
                     p_user_id: user.id,
                     p_amount: BONUS_AMOUNT,
                     p_type: 'sign_bonus'
                 });
+
+                // Some deployments do not yet have the credit_wallet RPC. Do not
+                // report a successful claim without a persisted wallet change.
+                if (creditResult.error) {
+                    const { data: wallet, error: walletError } = await supabaseAdmin
+                        .from('wallets')
+                        .select('income_balance')
+                        .eq('user_id', user.id)
+                        .single();
+                    if (walletError || !wallet) throw walletError || new Error('Wallet not found');
+
+                    const before = Number(wallet.income_balance) || 0;
+                    const after = before + BONUS_AMOUNT;
+                    const { error: updateError } = await supabaseAdmin
+                        .from('wallets')
+                        .update({ income_balance: after })
+                        .eq('user_id', user.id);
+                    if (updateError) throw updateError;
+
+                    const { error: transactionError } = await supabaseAdmin
+                        .from('transactions')
+                        .insert({
+                            user_id: user.id,
+                            type: 'sign_bonus',
+                            direction: 'credit',
+                            amount: BONUS_AMOUNT,
+                            balance_after: after,
+                            reference: `sign_${user.id}_${todayStr}`,
+                            meta: { source: 'daily_checkin', day }
+                        });
+                    if (transactionError) throw transactionError;
+                }
 
                 return res.status(200).json({ success: true, message: `Success! You earned ₦${BONUS_AMOUNT}`, amount: BONUS_AMOUNT, day });
 

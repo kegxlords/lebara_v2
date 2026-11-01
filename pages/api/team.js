@@ -34,7 +34,11 @@ export default async function handler(req, res) {
                 .like('reference', 'comm_l1_%');
 
             comms.forEach(c => {
-                const fromUid = c.meta?.from_user;
+                let meta = c.meta || {};
+                if (typeof meta === 'string') {
+                    try { meta = JSON.parse(meta); } catch { meta = {}; }
+                }
+                const fromUid = meta.from_user;
                 if (fromUid) {
                     commMap[fromUid] = (commMap[fromUid] || 0) + parseFloat(c.amount);
                     totalComm += parseFloat(c.amount);

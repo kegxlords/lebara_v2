@@ -36,10 +36,24 @@ export default async function handler(req, res) {
                 .eq('user_id', user.id)
                 .eq('status', 'active');
 
+            const { data: recentTxns } = await supabaseAdmin
+                .from('transactions')
+                .select('id, type, direction, amount, balance_after, reference, meta, created_at')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            const { count: activeReferrals } = await supabaseAdmin
+                .from('users')
+                .select('*', { count: 'exact', head: true })
+                .eq('referred_by', user.id)
+                .not('activated_at', 'is', null);
+
             res.status(200).json({
                 user: { ...user, has_pin: hasPin },
                 wallet: wallet || { balance: 0, income_balance: 0, pending_out: 0 },
-                stats: { activePackages: activeCount || 0 }
+                stats: { activePackages: activeCount || 0, activeReferrals: activeReferrals || 0 },
+                recentTxns: recentTxns || []
             });
         } catch (err) {
             res.status(500).json({ error: 'Server Error' });
@@ -71,7 +85,7 @@ export default async function handler(req, res) {
             const isValid = await bcrypt.compare(password, user.password_hash);
             if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
 
-            const token = generateToken({ id: user.id, phone: user.phone });
+            const token = generateToken({ id: user.id, phone: user.phone, role: user.role, is_admin: user.is_admin });
             setAuthCookie(res, token);
             return res.status(200).json({ success: true });
         }
@@ -121,7 +135,7 @@ export default async function handler(req, res) {
             await supabaseAdmin.from('wallets').insert({ user_id: newUser.id });
 
             // Auto Login
-            const token = generateToken({ id: newUser.id, phone: newUser.phone });
+            const token = generateToken({ id: newUser.id, phone: newUser.phone, role: newUser.role, is_admin: newUser.is_admin });
             setAuthCookie(res, token);
 
             return res.status(201).json({ success: true, user: newUser });

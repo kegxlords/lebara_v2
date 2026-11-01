@@ -1,6 +1,10 @@
 import { supabaseAdmin } from '../../lib/supabase';
 import crypto from 'crypto';
 
+export const config = {
+    api: { bodyParser: false }
+};
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
 
@@ -24,7 +28,7 @@ export default async function handler(req, res) {
             if (isDeposit) {
                 // Sig: md5(merchant_ak + platform_osn + status + original_order_amount + merchant_sk)
                 const orderRef = payload.order_sn;
-                const { data } = await supabaseAdmin.from('recharge_requests').select('amount, user_id, status').eq('provider_ref', orderRef).single();
+                const { data } = await supabaseAdmin.from('recharge_requests').select('id, amount, user_id, status').eq('provider_ref', orderRef).single();
                 dbRecord = data;
                 
                 if (!dbRecord) { res.writeHead(200, {'Content-Type': 'text/plain'}); res.end('SUCCESS'); return; }
@@ -57,11 +61,39 @@ export default async function handler(req, res) {
             // Process Result
             if (isDeposit) {
                 if (payload.status === 1) {
-                    await supabaseAdmin.rpc('apply_deposit_success', {
+                    const depositResult = await supabaseAdmin.rpc('apply_deposit_success', {
                         p_user_id: dbRecord.user_id,
                         p_request_id: dbRecord.id, // Assuming recharge_requests has ID
                         p_amount: parseFloat(dbRecord.amount)
                     });
+                    if (depositResult.error) {
+                        const { data: wallet, error: walletError } = await supabaseAdmin
+                            .from('wallets')
+                            .select('balance')
+                            .eq('user_id', dbRecord.user_id)
+                            .single();
+                        if (walletError || !wallet) throw walletError || new Error('Wallet not found');
+                        const before = Number(wallet.balance) || 0;
+                        const after = before + parseFloat(dbRecord.amount);
+                        const { error: updateError } = await supabaseAdmin
+                            .from('wallets')
+                            .update({ balance: after })
+                            .eq('user_id', dbRecord.user_id);
+                        if (updateError) throw updateError;
+                        const { error: transactionError } = await supabaseAdmin
+                            .from('transactions')
+                            .insert({
+                                user_id: dbRecord.user_id,
+                                type: 'deposit',
+                                direction: 'credit',
+                                amount: parseFloat(dbRecord.amount),
+                                balance_after: after,
+                                reference: orderRef,
+                                meta: { source: 'afrstar_webhook' }
+                            });
+                        if (transactionError) throw transactionError;
+                    }
+                    await supabaseAdmin.from('recharge_requests').update({ status: 'approved', handled_at: new Date() }).eq('id', dbRecord.id);
                 } else {
                     await supabaseAdmin.from('recharge_requests').update({ status: 'rejected', handled_at: new Date() }).eq('id', dbRecord.id);
                 }
