@@ -1,141 +1,37 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 
+const money = (value) => `₦${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
 export default function TeamPage() {
-  const [teamData, setTeamData] = useState(null);
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [data, setData] = useState(null);
+  const [origin, setOrigin] = useState('');
+  const [copied, setCopied] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    async function fetchTeam() {
-      const res = await fetch('/api/team'); 
-      if (res.ok) setTeamData(await res.json());
-    }
-    fetchTeam();
+    setOrigin(window.location.origin);
+    fetch('/api/team').then((res) => res.ok ? res.json() : res.json().then((body) => Promise.reject(new Error(body.error || 'Unable to load team')))).then(setData).catch((err) => setError(err.message));
   }, []);
 
-  if (!teamData) return <AppLayout>Loading...</AppLayout>;
+  const members = data?.members || [];
+  const stats = data?.stats || {};
+  const referralCode = data?.referralCode || '—';
+  const referralLink = origin && data?.referralCode ? `${origin}/register?ref=${data.referralCode}` : '';
+  const active = Number(stats.l1Active) || 0;
+  const progress = Math.min(100, (active / 3) * 100);
+  const copy = async (value, label) => { if (!value) return; try { await navigator.clipboard.writeText(value); setCopied(label); setTimeout(() => setCopied(''), 1800); } catch { setError('Copy is not available on this browser.'); } };
+  const joinedLabel = useMemo(() => (date) => date ? new Date(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recently', []);
 
-  const handleCopy = (text, type) => {
-    navigator.clipboard.writeText(text);
-    if (type === 'code') { setCopiedCode(true); setTimeout(()=>setCopiedCode(false), 2000); }
-    else { setCopiedLink(true); setTimeout(()=>setCopiedLink(false), 2000); }
-  };
+  if (error) return <AppLayout title="My Team"><div className="team-error"><b>Team data unavailable</b><span>{error}</span><button onClick={() => window.location.reload()}>Try again</button></div></AppLayout>;
+  if (!data) return <AppLayout title="My Team"><div className="premium-inline-loader">Syncing your team data…</div></AppLayout>;
 
-  return (
-    <AppLayout title="My Team">
-      
-      {/* HEADER WITH SHARE BUTTON */}
-      <div className="team-header-flex">
-        <div className="avatar-medium purple-gradient">M</div>
-        <div className="header-text">
-          <h2>My Team</h2>
-          <small>{teamData.userPhone} · code {teamData.referralCode}</small>
-        </div>
-        <button className="btn-share-yellow" onClick={() => alert("Native share dialog triggered")}>Share</button>
-      </div>
-
-      {/* STATS ROW (4 Items) */}
-      <div className="stats-row-4-bordered">
-        <div className="stat-col"><b>{teamData.stats.directCount}</b><span>DIRECT</span></div>
-        <div className="stat-col"><b>{teamData.stats.level2Count}</b><span>LEVEL-2</span></div>
-        <div className="stat-col highlight-pink"><b>{teamData.stats.activatedCount}</b><span>ACTIVATED</span></div>
-        <div className="stat-col money-gold"><b>₦{parseFloat(teamData.stats.totalDeposits).toLocaleString()}</b><span>TEAM DEPOSITS</span></div>
-      </div>
-
-      {/* INVITATION CODE BOX */}
-      <div className="invite-box-dashed">
-        <label>YOUR INVITATION CODE</label>
-        <div className="code-action-row">
-          <h2 className="big-code">{teamData.referralCode}</h2>
-          <button className={`btn-copy-sm ${copiedCode ? 'success' : ''}`} onClick={() => handleCopy(teamData.referralCode, 'code')}>
-            {copiedCode ? 'Copied!' : 'Copy code'}
-          </button>
-        </div>
-        <div className="link-action-row">
-          <input type="text" readOnly value={`${window.location.origin}/register?ref=${teamData.referralCode}`} />
-          <button className={`btn-copy-link ${copiedLink ? 'success' : ''}`} onClick={() => handleCopy(`${window.location.origin}/register?ref=${teamData.referralCode}`, 'link')}>
-            {copiedLink ? 'Copied!' : 'Copy link'}
-          </button>
-        </div>
-      </div>
-
-      {/* VIP PROGRESS MINI-CARD */}
-      <div className="vip-mini-card-dark">
-        <div className="flex-between mb-2">
-          <span className="diamond-icon-sm">💎</span>
-          <span className="font-bold">VIP Level {teamData.currentVipLevel}</span>
-        </div>
-        <p className="text-xs opacity-80">{teamData.vipStatusText}</p>
-        <div className="progress-bar-white-track mt-2">
-          <div className="progress-fill-yellow-solid" style={{ width: `${teamData.vipProgress}%` }}></div>
-        </div>
-      </div>
-
-      {/* LEVEL 1 REFERRALS LIST */}
-      <div className="section-title-with-badge">
-        <h3>Level 1 referrals</h3>
-        <span className="badge-commission">{teamData.l1Rate}% commission</span>
-      </div>
-
-      <div className="referrals-list-container">
-        {teamData.l1Members && teamData.l1Members.length > 0 ? (
-          teamData.l1Members.map(member => (
-            <div key={member.id} className="member-card-full">
-              <div className="member-head">
-                <div className="avatar-small-purple">{member.name.charAt(0)}</div>
-                <div className="member-info">
-                  <b>{member.name}</b>
-                  <small className="block muted">joined {new Date(member.joined).toLocaleDateString()}</small>
-                </div>
-                <span className={`status-pill ${member.isActive ? 'green' : 'orange'}`}>
-                  {member.isActive ? 'ACTIVE' : 'PENDING'}
-                </span>
-              </div>
-              
-              <div className="member-stats-grid-3">
-                <div className="m-stat">
-                  <b className="pink">{member.depositCount}</b>
-                  <span>DEPOSITS</span>
-                </div>
-                <div className="m-stat">
-                  <b className="gold">₦{member.totalDeposited.toLocaleString()}</b>
-                  <span>TOTAL DEPOSITED</span>
-                </div>
-                <div className="m-stat">
-                  <b className="navy">₦{member.investedAmount.toLocaleString()}</b>
-                  <span>INVESTED</span>
-                </div>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="empty-state-card">No Level 1 members yet.</div>
-        )}
-      </div>
-
-      {/* LEVEL 2 REFERRALS LIST (Compact) */}
-      <div className="section-title-with-badge mt-4">
-        <h3>Level 2 referrals</h3>
-        <span className="badge-commission gray">{teamData.l2Rate}% commission</span>
-      </div>
-       <div className="referrals-list-container">
-        {teamData.l2Members && teamData.l2Members.length > 0 ? (
-          teamData.l2Members.map(member => (
-             <div key={member.id} className="member-card-compact">
-               <div className="avatar-small-pink">{member.name.charAt(0)}</div>
-               <div className="flex-1 ml-2">
-                 <b>{member.name}</b>
-                 <small className="block muted text-xs">joined {new Date(member.joined).toLocaleDateString()}</small>
-               </div>
-               <span className={`status-pill small ${member.isActive ? 'green' : 'gray'}`}>{member.isActive ? 'ACTIVE' : 'PENDING'}</span>
-             </div>
-          ))
-        ) : (
-          <div className="empty-state-card small">No Level 2 members yet.</div>
-        )}
-      </div>
-
-    </AppLayout>
-  );
+  return <AppLayout title="My Team">
+    <section className="team-future-hero"><div className="team-orb">♧</div><div><span className="eyebrow">NETWORK COMMAND</span><h1>My team</h1><p>{data.userPhone || 'Your referral network'} · invite, grow, earn</p></div><button className="team-share-button" onClick={() => copy(referralLink, 'link')}>{copied === 'link' ? 'Copied' : 'Share'}</button></section>
+    <section className="team-metrics"><div><b>{stats.l1Count || 0}</b><span>Direct members</span></div><div><b>{active}</b><span>Activated</span></div><div><b>{money(stats.totalComm)}</b><span>Commissions</span></div></section>
+    <section className="team-invite-card"><div className="team-invite-top"><div><span className="eyebrow">YOUR INVITE CODE</span><strong>{referralCode}</strong></div><button onClick={() => copy(referralCode, 'code')}>{copied === 'code' ? 'Copied' : 'Copy code'}</button></div><div className="team-link-row"><input readOnly value={referralLink || 'Preparing invite link…'} /><button onClick={() => copy(referralLink, 'link')}>Copy link</button></div></section>
+    <section className="team-progress-card"><div className="team-progress-copy"><div><span className="eyebrow">NEXT MILESTONE</span><h2>{active >= 3 ? 'VIP progress unlocked' : `${3 - active} more activation${3 - active === 1 ? '' : 's'} to VIP 1`}</h2></div><strong>{Math.round(progress)}%</strong></div><div className="team-progress-track"><span style={{ width: `${progress}%` }} /></div><small>Activated members unlock stronger earning potential.</small></section>
+    <div className="team-section-heading"><div><span className="eyebrow">DIRECT NETWORK</span><h2>Your members</h2></div><span>{members.length} total</span></div>
+    <section className="team-member-list">{members.length === 0 ? <div className="team-empty"><span>＋</span><b>Your team is ready to grow</b><small>Share your invite code to bring your first member into the network.</small></div> : members.map((member) => { const name = member.full_name || member.phone || 'Member'; return <article className="team-member-card" key={member.id}><div className="team-member-avatar">{name.charAt(0).toUpperCase()}</div><div className="team-member-main"><b>{name}</b><small>{member.phone || 'Lebara member'} · joined {joinedLabel(member.created_at)}</small></div><div className="team-member-side"><span className={member.activated_at ? 'active' : 'pending'}>{member.activated_at ? 'ACTIVE' : 'PENDING'}</span><small>{money(member.commission_earned)} earned</small></div></article>; })}</section>
+  </AppLayout>;
 }
