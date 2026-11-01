@@ -1,204 +1,80 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Link from 'next/link';
+
+const money = (value) => `₦${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
 export default function WithdrawPage() {
   const [banks, setBanks] = useState([]);
   const [selectedBankId, setSelectedBankId] = useState('');
   const [amount, setAmount] = useState('');
   const [pin, setPin] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [settings, setSettings] = useState({ min: 1000, max: 1000000, fee: 0 });
+  const [windowStatus, setWindowStatus] = useState({ isOpen: true, label: '08:00 – 22:00 WAT' });
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
-  // Settings & Balance State
-  const [settings, setSettings] = useState({ min: 1000, max: 1000000, fee: 0 });
-  const [balance, setBalance] = useState(0);
-  const [windowStatus, setWindowStatus] = useState({ isOpen: true, label: '' });
 
   useEffect(() => {
-    async function initData() {
+    let mounted = true;
+    async function init() {
       try {
-        // 1. Fetch Saved Banks
-        const bankRes = await fetch('/api/user-settings?type=banks');
-        if (bankRes.ok) {
-          const data = await bankRes.json();
-          setBanks(data);
-          if (data.length > 0) setSelectedBankId(data[0].id);
+        const [bankRes, authRes, settingsRes] = await Promise.all([fetch('/api/user-settings?type=banks'), fetch('/api/auth'), fetch('/api/admin?section=settings_public')]);
+        if (bankRes.ok) { const data = await bankRes.json(); if (mounted) { setBanks(data); setSelectedBankId(data[0]?.id || ''); } }
+        if (authRes.ok) { const data = await authRes.json(); if (mounted) setBalance(Number(data.wallet?.income_balance) || 0); }
+        if (settingsRes.ok) {
+          const data = await settingsRes.json();
+          const next = { min: Number(data.wd_min_amount) || 1000, max: Number(data.wd_max_amount) || 1000000, fee: Number(data.withdrawal_fee_pct) || 0 };
+          const start = data.wd_hours_start || '08:00'; const end = data.wd_hours_end || '22:00';
+          const now = new Date().toLocaleTimeString('en-NG', { hour12: false, timeZone: 'Africa/Lagos' }).slice(0, 5);
+          if (mounted) { setSettings(next); setWindowStatus({ isOpen: now >= start && now <= end, label: `${start} – ${end} WAT` }); }
         }
-
-        // 2. Fetch User Stats (Balance)
-        const authRes = await fetch('/api/auth');
-        if (authRes.ok) {
-          const data = await authRes.json();
-          setBalance(parseFloat(data.wallet.income_balance || 0));
-        }
-
-        // 3. Fetch Platform Limits (Simulated via Admin API or hardcoded fallback)
-        // In production, create an endpoint /api/settings/public
-        const settingsRes = await fetch('/api/admin?section=settings_public'); 
-        if(settingsRes.ok) {
-           const sData = await settingsRes.json();
-           setSettings({
-             min: parseFloat(sData.wd_min_amount || 1000),
-             max: parseFloat(sData.wd_max_amount || 1000000),
-             fee: parseFloat(sData.withdrawal_fee_pct || 0)
-           });
-           
-           // Check Window Status Client-Side for UX
-           const start = sData.wd_hours_start || '08:00';
-           const end = sData.wd_hours_end || '22:00';
-           const now = new Date().toLocaleTimeString('en-NG', { hour12: false, timeZone: 'Africa/Lagos' }).slice(0,5);
-           
-           const isOpen = now >= start && now <= end;
-           setWindowStatus({ isOpen, label: `${start} – ${end} WAT` });
-        }
-
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); } finally { if (mounted) setLoading(false); }
     }
-    initData();
+    init();
+    return () => { mounted = false; };
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // CLIENT SIDE VALIDATION FIRST
-    const amtNum = parseFloat(amount);
-    if (!amtNum || isNaN(amtNum)) return setError('Enter a valid amount');
-    if (amtNum < settings.min) return setError(`Minimum withdrawal is ₦${settings.min.toLocaleString()}`);
-    if (amtNum > settings.max) return setError(`Maximum withdrawal is ₦${settings.max.toLocaleString()}`);
-    if (amtNum > balance) return setError('Insufficient balance');
-    if (!selectedBankId) return setError('Select a bank account');
-    if (!pin) return setError('Enter Withdrawal PIN');
+  const numericAmount = Number(amount) || 0;
+  const fee = Math.round((numericAmount * settings.fee / 100) * 100) / 100;
+  const receive = Math.max(0, numericAmount - fee);
+  const selectedBank = banks.find((bank) => String(bank.id) === String(selectedBankId));
+  const valid = numericAmount >= settings.min && numericAmount <= settings.max && numericAmount <= balance && Boolean(selectedBankId) && pin.length >= 4 && windowStatus.isOpen;
 
-    setLoading(true);
-    setError('');
-    setSuccess('');
-    
+  async function handleSubmit(event) {
+    event.preventDefault(); setError(''); setSuccess('');
+    if (!selectedBankId) return setError('Add or select a bank account before requesting a payout.');
+    if (numericAmount < settings.min) return setError(`Minimum withdrawal is ${money(settings.min)}.`);
+    if (numericAmount > settings.max) return setError(`Maximum withdrawal is ${money(settings.max)}.`);
+    if (numericAmount > balance) return setError('The requested amount is higher than your available income balance.');
+    if (pin.length < 4) return setError('Enter your 4–6 digit withdrawal PIN.');
+    if (!windowStatus.isOpen) return setError(`Withdrawals are available ${windowStatus.label}.`);
+    setSubmitting(true);
     try {
-      const res = await fetch('/api/withdraw', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          amount: amtNum, 
-          bankId: selectedBankId, 
-          pin 
-        }),
-      });
-      
+      const res = await fetch('/api/withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: numericAmount, bankId: selectedBankId, pin }) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Withdrawal failed');
-      
-      setSuccess(`Request submitted! Ref: ${data.ref}`);
-      setAmount('');
-      setPin('');
-      // Refresh balance logic would go here
-      
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (!res.ok) throw new Error(data.error || 'Withdrawal could not be submitted');
+      setSuccess(`Withdrawal submitted successfully. Reference: ${data.ref}`); setAmount(''); setPin('');
+    } catch (err) { setError(err.message); } finally { setSubmitting(false); }
+  }
 
-  return (
-    <AppLayout title="Withdraw Funds">
-      
-      {/* ERROR/SUCCESS ALERTS */}
-      {error && <div className="alert-error" style={{ margin: '16px' }}>{error}</div>}
-      {success && <div className="msg success" style={{ margin: '16px' }}>{success}</div>}
-
-      {/* BALANCE HERO */}
-      <div className="form-hero">
-        <div className="k">Available Balance</div>
-        <div className="v">₦{balance.toLocaleString()}</div>
-        <div className="s">
-          Payout window: {windowStatus.label} · Now {new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} WAT
-        </div>
-      </div>
-
-      {/* STATUS NOTICE */}
-      {!windowStatus.isOpen ? (
-         <div className="notice closed" style={{ margin: '16px' }}>⏸ Withdrawals open {windowStatus.label}. Try again later.</div>
-      ) : (
-         <div className="notice open" style={{ margin: '16px' }}>✅ Payouts open. Transfers dispatch instantly.</div>
-      )}
-
-      {/* FORM */}
-      <div className="card-form">
-        <h3>New Withdrawal</h3>
-        
-        <form onSubmit={handleSubmit}>
-          
-          {/* AMOUNT INPUT */}
-          <div className="field">
-            <label className="label">Amount (₦)</label>
-            <input 
-              type="number" 
-              step="0.01" 
-              min={settings.min} 
-              max={Math.min(balance, settings.max)}
-              className="input-large" 
-              placeholder="0.00" 
-              value={amount} 
-              onChange={(e) => setAmount(e.target.value)} 
-              required 
-            />
-            
-            {/* QUICK SELECT BUTTONS */}
-            <div className="quick-select">
-              <button type="button" className="q-btn" onClick={() => setAmount(settings.min)}>₦{settings.min.toLocaleString()}</button>
-              <button type="button" className="q-btn" onClick={() => setAmount(5000)}>₦5,000</button>
-              <button type="button" className="q-btn" onClick={() => setAmount(10000)}>₦10,000</button>
-              <button type="button" className="q-btn" onClick={() => setAmount(Math.floor(balance))}>All</button>
-            </div>
-            <p className="help-text mt-2 text-center muted">Range: ₦{settings.min.toLocaleString()} – ₦{settings.max.toLocaleString()}</p>
-          </div>
-
-          {/* BANK SELECTOR */}
-          <div className="field">
-            <label className="label">Select Bank Account</label>
-            {banks.length === 0 ? (
-               <div className="notice-gate" style={{ padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
-                 No saved banks. <a href="/profile" className="underline">Add one in Profile</a>.
-               </div>
-            ) : (
-              <select 
-                className="input-large select-bank" 
-                value={selectedBankId} 
-                onChange={(e) => setSelectedBankId(e.target.value)}
-                required
-              >
-                {banks.map(b => (
-                  <option key={b.id} value={b.id}>
-                    {b.bank_name} • {b.account_number.slice(-4)} ({b.account_name})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* PIN INPUT */}
-          <div className="field">
-            <label className="label">Withdrawal PIN</label>
-            <input 
-              type="password" 
-              maxLength="6"
-              className="input-large" 
-              placeholder="••••" 
-              value={pin} 
-              onChange={(e) => setPin(e.target.value.replace(/\D/g,''))} 
-              required 
-            />
-            <p className="secure-note">Required for security. Set in Profile Settings.</p>
-          </div>
-          
-          <button type="submit" className="btn-primary-full" disabled={loading || banks.length === 0 || !windowStatus.isOpen}>
-            {loading ? 'Processing...' : 'Request Withdrawal'}
-          </button>
-        </form>
-      </div>
-    </AppLayout>
-  );
+  return <AppLayout title="Withdraw">
+    <section className="moneyflow-hero withdraw-hero"><div className="moneyflow-icon">↗</div><div><span className="eyebrow">SECURE PAYOUTS</span><h1>Move money home</h1><p>Withdraw your earned income directly to your bank.</p></div><span className={`secure-badge ${windowStatus.isOpen ? 'open' : 'closed'}`}>{windowStatus.isOpen ? '● Open' : '● Closed'}</span></section>
+    <section className="withdraw-balance"><div><span>Available income</span><strong>{loading ? 'Loading…' : money(balance)}</strong></div><div className="balance-caption">Only earned income is withdrawable</div></section>
+    <div className={`payout-status ${windowStatus.isOpen ? 'open' : 'closed'}`}><span>{windowStatus.isOpen ? '✓' : '◷'}</span><div><b>{windowStatus.isOpen ? 'Payouts are open' : 'Payout window is closed'}</b><small>{windowStatus.isOpen ? 'Requests are being processed now' : `Available daily from ${windowStatus.label}`}</small></div><strong>{windowStatus.label}</strong></div>
+    <form className="moneyflow-card withdraw-form" onSubmit={handleSubmit}>
+      <div className="moneyflow-card-heading"><div><span className="eyebrow">SECURE REQUEST</span><h2>Withdrawal details</h2></div><span className="step-complete">Protected</span></div>
+      {error && <div className="moneyflow-alert error">{error}</div>}{success && <div className="moneyflow-alert success">{success}<Link href="/history">View transaction history ›</Link></div>}
+      <label className="money-label" htmlFor="withdraw-amount">How much would you like to withdraw?</label>
+      <div className={`money-input-wrap ${amount ? 'filled' : ''}`}><span>₦</span><input id="withdraw-amount" type="number" inputMode="decimal" min={settings.min} max={Math.min(settings.max, balance)} step="50" placeholder="0.00" value={amount} onChange={(event) => { setAmount(event.target.value); setError(''); }} required /><small>NGN</small></div>
+      <div className="amount-presets">{[settings.min, 5000, 10000, Math.floor(balance)].filter((value, index, array) => value >= settings.min && value <= balance && value > 0 && array.indexOf(value) === index).map((preset) => <button type="button" key={preset} className={numericAmount === preset ? 'selected' : ''} onClick={() => setAmount(String(preset))}>{preset === Math.floor(balance) ? 'All available' : money(preset)}</button>)}</div>
+      <div className="money-label bank-label">Send to bank account <Link href="/profile">Manage banks</Link></div>
+      {banks.length === 0 ? <div className="empty-bank"><span>＋</span><div><b>No bank account saved</b><small>Add a verified bank account in your profile settings.</small></div><Link href="/profile">Add bank ›</Link></div> : <div className="bank-list">{banks.map((bank) => <button type="button" key={bank.id} className={`bank-card ${String(selectedBankId) === String(bank.id) ? 'selected' : ''}`} onClick={() => setSelectedBankId(bank.id)}><span className="bank-emblem">₦</span><span><b>{bank.bank_name}</b><small>{bank.account_name} · •••• {bank.account_number.slice(-4)}</small></span><i>{String(selectedBankId) === String(bank.id) ? '✓' : ''}</i></button>)}</div>}
+      <label className="money-label" htmlFor="withdraw-pin">Withdrawal PIN <Link href="/profile">Forgot or change PIN?</Link></label><div className="pin-input-wrap"><span>⌁</span><input id="withdraw-pin" type="password" inputMode="numeric" maxLength="6" placeholder="Enter 4–6 digit PIN" value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, ''))} required /><small>••••</small></div>
+      <div className="cost-summary withdrawal-summary"><div><span>Withdrawal amount</span><b>{money(numericAmount)}</b></div><div><span>Service fee {settings.fee ? `(${settings.fee}%)` : ''}</span><b>{settings.fee ? money(fee) : 'Free'}</b></div><div className="summary-total"><span>You receive</span><strong>{money(receive)}</strong></div></div>
+      <button className="moneyflow-primary withdrawal-button" disabled={submitting || !valid}>{submitting ? 'Submitting secure request…' : 'Request withdrawal  →'}</button><p className="moneyflow-footnote">Your PIN is encrypted and never shared with the payment provider.</p>
+    </form>
+  </AppLayout>;
 }
