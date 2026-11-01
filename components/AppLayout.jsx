@@ -18,7 +18,7 @@ export default function AppLayout({ children, title = "" }) {
           return;
         }
         const data = await res.json();
-        if (data.wallet) setBalance(parseFloat(data.wallet.balance));
+        if (data.wallet) setBalance(Number(data.wallet.balance) || 0);
       } catch (e) {
         console.error(e);
       } finally {
@@ -37,8 +37,12 @@ export default function AppLayout({ children, title = "" }) {
       {/* TOP BAR */}
       <header className="top-bar">
         <Link href="/" className="brand">LEBARA</Link>
-        <div className="wallet-pill">₦{balance.toLocaleString()}</div>
-        <button className="icon-btn"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></button>
+        <div className="top-actions">
+          <div className="wallet-pill">₦{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <button className="message-btn" aria-label="Messages">
+            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1.9-2 2-2zm-2 12H7.17L6 15.17V6h12v8z"/></svg>
+          </button>
+        </div>
       </header>
 
       {/* MAIN CONTENT AREA */}
