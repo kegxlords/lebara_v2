@@ -8,6 +8,12 @@ export default async function handler(req, res) {
     if (!user) return;
 
     try {
+        const { data: profile } = await supabaseAdmin
+            .from('users')
+            .select('phone, referral_code')
+            .eq('id', user.id)
+            .single();
+
         // 1. Get Direct Referrals (L1)
         const { data: members } = await supabaseAdmin
             .from('users')
@@ -20,7 +26,7 @@ export default async function handler(req, res) {
         const commMap = {};
 
         if (members && members.length > 0) {
-            const { data: comms } = await supabaseAdmin
+            const { data: comms = [] } = await supabaseAdmin
                 .from('transactions')
                 .select('amount, meta')
                 .eq('user_id', user.id)
@@ -44,6 +50,8 @@ export default async function handler(req, res) {
         const activeRefs = members ? members.filter(m => m.activated_at).length : 0;
 
         res.status(200).json({
+            userPhone: profile?.phone || '',
+            referralCode: profile?.referral_code || '',
             members: enrichedMembers,
             stats: { l1Count: members?.length || 0, l1Active: activeRefs, totalComm }
         });
