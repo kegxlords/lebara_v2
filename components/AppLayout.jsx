@@ -2,77 +2,74 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
-export default function AppLayout({ children, title = "" }) {
+function PremiumLoader() {
+  return (
+    <div className="premium-loader" role="status" aria-label="Loading Lebara">
+      <div className="loader-orbit"><span>LEBARA</span></div>
+      <div className="loader-copy"><b>Preparing your experience</b><small>Securely loading your account</small></div>
+    </div>
+  );
+}
+
+const navItems = [
+  { href: '/dashboard', label: 'Home', icon: '⌂' },
+  { href: '/packages', label: 'Plans', icon: '▣' },
+  { href: '/orders', label: 'Orders', icon: '▤' },
+  { href: '/team', label: 'Team', icon: '♧' },
+  { href: '/profile', label: 'My', icon: '◉' },
+];
+
+export default function AppLayout({ children, title = '' }) {
   const router = useRouter();
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Fetch Balance on Load
   useEffect(() => {
-    async function getBal() {
+    let mounted = true;
+    async function getAccount() {
       try {
-        // Use the unified auth endpoint implemented in pages/api/auth.js.
         const res = await fetch('/api/auth');
         if (!res.ok) {
-          router.push('/');
+          router.replace('/');
           return;
         }
         const data = await res.json();
-        if (data.wallet) setBalance(Number(data.wallet.balance) || 0);
-      } catch (e) {
-        console.error(e);
+        if (mounted) setBalance(Number(data.wallet?.balance) || 0);
+      } catch (error) {
+        console.error(error);
+        if (mounted) router.replace('/');
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
-    getBal();
+    getAccount();
+    return () => { mounted = false; };
   }, [router]);
 
-  const isActive = (path) => router.pathname === path ? 'active' : '';
-
-  if (loading) return <div className="loading-screen">Loading...</div>;
+  if (loading) return <PremiumLoader />;
 
   return (
-    <div className="app-shell">
-      {/* TOP BAR */}
-      <header className="top-bar">
-        <Link href="/" className="brand">LEBARA</Link>
+    <div className="app-shell premium-shell">
+      <header className="top-bar premium-topbar">
+        <Link href="/dashboard" className="brand premium-brand"><span className="brand-mark">L</span> LEBARA</Link>
         <div className="top-actions">
-          <div className="wallet-pill">₦{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          <button className="message-btn" aria-label="Messages">
-            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1.9-2 2-2zm-2 12H7.17L6 15.17V6h12v8z"/></svg>
-          </button>
+          <Link href="/recharge" className="wallet-pill premium-wallet">₦{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<small>Balance</small></Link>
+          <Link href="/support" className="message-btn premium-message" aria-label="Customer service">?</Link>
         </div>
       </header>
 
-      {/* MAIN CONTENT AREA */}
-      <main className="content-area">
-        {title && <h1 className="page-title">{title}</h1>}
+      <main className="content-area premium-content">
+        {title && <h1 className="page-title premium-page-title">{title}</h1>}
         {children}
       </main>
 
-      {/* BOTTOM NAVIGATION */}
-      <nav className="bottom-nav">
-        <Link href="/dashboard" className={`nav-item ${isActive('/dashboard')}`}>
-          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-          <span>Home</span>
-        </Link>
-        <Link href="/packages" className={`nav-item ${isActive('/packages')}`}>
-          <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c-.11-.31-.27-.59-.48-.84l1.42-1.42-1.42-1.42-1.42 1.42c-.25-.21-.53-.37-.84-.48V2h-2v1.82c-.31.11-.59.27-.84.48L8.84 2.9 7.42 4.32l1.42 1.42c-.21.25-.37.53-.48.84H4v2h2.18c.11.31.27.59.48.84L5.24 11.4l1.42 1.42 1.42-1.42c.25.21.53.37.84.48V16h2v-2.18c.31-.11.59-.27.84-.48l1.42 1.42 1.42-1.42-1.42-1.42c.21-.25.37-.53.48-.84H20V6zm-8 4c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
-          <span>Package</span>
-        </Link>
-        <Link href="/orders" className={`nav-item ${isActive('/orders')}`}>
-          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-          <span>Order</span>
-        </Link>
-        <Link href="/team" className={`nav-item ${isActive('/team')}`}>
-          <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-          <span>Team</span>
-        </Link>
-        <Link href="/profile" className={`nav-item ${isActive('/profile')}`}>
-          <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-          <span>My</span>
-        </Link>
+      <nav className="bottom-nav premium-nav" aria-label="Primary navigation">
+        {navItems.map((item) => (
+          <Link key={item.href} href={item.href} className={`nav-item premium-nav-item ${router.pathname === item.href ? 'active' : ''}`}>
+            <span className="nav-glyph">{item.icon}</span>
+            <span>{item.label}</span>
+          </Link>
+        ))}
       </nav>
     </div>
   );
