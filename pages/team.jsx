@@ -3,113 +3,136 @@ import AppLayout from '../components/AppLayout';
 
 export default function TeamPage() {
   const [teamData, setTeamData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     async function fetchTeam() {
-      // Assuming /api/team returns structured L1/L2 data
-      const res = await fetch('/api/team');
-      if (res.ok) {
-        setTeamData(await res.json());
-      }
-      setLoading(false);
+      const res = await fetch('/api/team'); 
+      if (res.ok) setTeamData(await res.json());
     }
     fetchTeam();
   }, []);
 
-  if (loading) return <AppLayout>Loading...</AppLayout>;
-  if (!teamData) return <AppLayout>Error loading team.</AppLayout>;
+  if (!teamData) return <AppLayout>Loading...</AppLayout>;
 
-  const { l1Members, l2Members, stats } = teamData;
+  const handleCopy = (text, type) => {
+    navigator.clipboard.writeText(text);
+    if (type === 'code') { setCopiedCode(true); setTimeout(()=>setCopiedCode(false), 2000); }
+    else { setCopiedLink(true); setTimeout(()=>setCopiedLink(false), 2000); }
+  };
 
   return (
     <AppLayout title="My Team">
       
-      {/* COMMISSION EARNINGS SUMMARY */}
-      <div className="card-form" style={{ marginBottom: '20px' }}>
-        <h3>Your commission earnings</h3>
-        <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', margin: '10px 0' }}>
-          <div className="stat-card gold" style={{ padding: '10px' }}>
-            <span className="value" style={{ fontSize: '16px' }}>₦{(stats.l1Commission || 0).toLocaleString()}</span>
-            <span className="label" style={{ fontSize: '9px' }}>FROM LEVEL 1</span>
-          </div>
-          <div className="stat-card gold" style={{ padding: '10px' }}>
-            <span className="value" style={{ fontSize: '16px' }}>₦{(stats.l2Commission || 0).toLocaleString()}</span>
-            <span className="label" style={{ fontSize: '9px' }}>FROM LEVEL 2</span>
-          </div>
-          <div className="stat-card" style={{ padding: '10px' }}>
-            <span className="value" style={{ fontSize: '16px', color: '#1E7A46' }}>₦{(stats.totalCommission || 0).toLocaleString()}</span>
-            <span className="label" style={{ fontSize: '9px' }}>TOTAL EARNED</span>
-          </div>
+      {/* HEADER WITH SHARE BUTTON */}
+      <div className="team-header-flex">
+        <div className="avatar-medium purple-gradient">M</div>
+        <div className="header-text">
+          <h2>My Team</h2>
+          <small>{teamData.userPhone} · code {teamData.referralCode}</small>
+        </div>
+        <button className="btn-share-yellow" onClick={() => alert("Native share dialog triggered")}>Share</button>
+      </div>
+
+      {/* STATS ROW (4 Items) */}
+      <div className="stats-row-4-bordered">
+        <div className="stat-col"><b>{teamData.stats.directCount}</b><span>DIRECT</span></div>
+        <div className="stat-col"><b>{teamData.stats.level2Count}</b><span>LEVEL-2</span></div>
+        <div className="stat-col highlight-pink"><b>{teamData.stats.activatedCount}</b><span>ACTIVATED</span></div>
+        <div className="stat-col money-gold"><b>₦{parseFloat(teamData.stats.totalDeposits).toLocaleString()}</b><span>TEAM DEPOSITS</span></div>
+      </div>
+
+      {/* INVITATION CODE BOX */}
+      <div className="invite-box-dashed">
+        <label>YOUR INVITATION CODE</label>
+        <div className="code-action-row">
+          <h2 className="big-code">{teamData.referralCode}</h2>
+          <button className={`btn-copy-sm ${copiedCode ? 'success' : ''}`} onClick={() => handleCopy(teamData.referralCode, 'code')}>
+            {copiedCode ? 'Copied!' : 'Copy code'}
+          </button>
+        </div>
+        <div className="link-action-row">
+          <input type="text" readOnly value={`${window.location.origin}/register?ref=${teamData.referralCode}`} />
+          <button className={`btn-copy-link ${copiedLink ? 'success' : ''}`} onClick={() => handleCopy(`${window.location.origin}/register?ref=${teamData.referralCode}`, 'link')}>
+            {copiedLink ? 'Copied!' : 'Copy link'}
+          </button>
         </div>
       </div>
 
-      {/* LEVEL 1 REFERRALS SECTION */}
-      <div className="section-header flex justify-between items-center" style={{ margin: '20px 16px 10px' }}>
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#123A8F' }}>Level 1 referrals</h3>
-        <span className="badge-pill yellow">{stats.l1Rate || 20}% commission</span>
+      {/* VIP PROGRESS MINI-CARD */}
+      <div className="vip-mini-card-dark">
+        <div className="flex-between mb-2">
+          <span className="diamond-icon-sm">💎</span>
+          <span className="font-bold">VIP Level {teamData.currentVipLevel}</span>
+        </div>
+        <p className="text-xs opacity-80">{teamData.vipStatusText}</p>
+        <div className="progress-bar-white-track mt-2">
+          <div className="progress-fill-yellow-solid" style={{ width: `${teamData.vipProgress}%` }}></div>
+        </div>
       </div>
 
-      <div className="list-container" style={{ margin: '0 16px' }}>
-        {l1Members && l1Members.length > 0 ? (
-          l1Members.map(member => (
-            <div key={member.id} className="referral-card-item">
-              <div className="ref-head">
-                <div className="avatar-sm purple">{member.name.charAt(0)}</div>
-                <div className="ref-info">
+      {/* LEVEL 1 REFERRALS LIST */}
+      <div className="section-title-with-badge">
+        <h3>Level 1 referrals</h3>
+        <span className="badge-commission">{teamData.l1Rate}% commission</span>
+      </div>
+
+      <div className="referrals-list-container">
+        {teamData.l1Members && teamData.l1Members.length > 0 ? (
+          teamData.l1Members.map(member => (
+            <div key={member.id} className="member-card-full">
+              <div className="member-head">
+                <div className="avatar-small-purple">{member.name.charAt(0)}</div>
+                <div className="member-info">
                   <b>{member.name}</b>
-                  <small className="block muted">joined {new Date(member.joined).toLocaleDateString()} · activated {member.isActive ? new Date(member.activatedAt).toLocaleDateString() : '-'}</small>
+                  <small className="block muted">joined {new Date(member.joined).toLocaleDateString()}</small>
                 </div>
-                <span className={`status-chip ${member.isActive ? 'green' : 'gray'}`}>
+                <span className={`status-pill ${member.isActive ? 'green' : 'orange'}`}>
                   {member.isActive ? 'ACTIVE' : 'PENDING'}
                 </span>
               </div>
               
-              <div className="ref-stats-grid">
-                <div className="ref-stat">
-                  <b>{member.depositCount}</b>
+              <div className="member-stats-grid-3">
+                <div className="m-stat">
+                  <b className="pink">{member.depositCount}</b>
                   <span>DEPOSITS</span>
                 </div>
-                <div className="ref-stat">
+                <div className="m-stat">
                   <b className="gold">₦{member.totalDeposited.toLocaleString()}</b>
                   <span>TOTAL DEPOSITED</span>
                 </div>
-                <div className="ref-stat">
-                  <b>₦{member.investedAmount.toLocaleString()}</b>
+                <div className="m-stat">
+                  <b className="navy">₦{member.investedAmount.toLocaleString()}</b>
                   <span>INVESTED</span>
                 </div>
               </div>
             </div>
           ))
         ) : (
-          <div className="empty-state">No Level 1 referrals yet.</div>
+          <div className="empty-state-card">No Level 1 members yet.</div>
         )}
       </div>
 
-      {/* LEVEL 2 REFERRALS SECTION */}
-      <div className="section-header flex justify-between items-center" style={{ margin: '20px 16px 10px' }}>
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#123A8F' }}>Level 2 referrals</h3>
-        <span className="badge-pill gray">{stats.l2Rate || 2}% commission</span>
+      {/* LEVEL 2 REFERRALS LIST (Compact) */}
+      <div className="section-title-with-badge mt-4">
+        <h3>Level 2 referrals</h3>
+        <span className="badge-commission gray">{teamData.l2Rate}% commission</span>
       </div>
-
-      <div className="list-container" style={{ margin: '0 16px' }}>
-        {l2Members && l2Members.length > 0 ? (
-          l2Members.map(member => (
-            <div key={member.id} className="referral-card-item compact">
-               <div className="ref-head">
-                <div className="avatar-sm pink">{member.name.charAt(0)}</div>
-                <div className="ref-info">
-                  <b>{member.name}</b>
-                  <small className="block muted">joined {new Date(member.joined).toLocaleDateString()}</small>
-                </div>
-                <span className={`status-chip ${member.isActive ? 'green' : 'orange'}`}>
-                  {member.isActive ? 'ACTIVE' : 'PENDING'}
-                </span>
-              </div>
-            </div>
+       <div className="referrals-list-container">
+        {teamData.l2Members && teamData.l2Members.length > 0 ? (
+          teamData.l2Members.map(member => (
+             <div key={member.id} className="member-card-compact">
+               <div className="avatar-small-pink">{member.name.charAt(0)}</div>
+               <div className="flex-1 ml-2">
+                 <b>{member.name}</b>
+                 <small className="block muted text-xs">joined {new Date(member.joined).toLocaleDateString()}</small>
+               </div>
+               <span className={`status-pill small ${member.isActive ? 'green' : 'gray'}`}>{member.isActive ? 'ACTIVE' : 'PENDING'}</span>
+             </div>
           ))
         ) : (
-          <div className="empty-state">No Level 2 referrals yet.</div>
+          <div className="empty-state-card small">No Level 2 members yet.</div>
         )}
       </div>
 
