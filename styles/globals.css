@@ -568,3 +568,44 @@ input:checked + .slider-admin:before { transform: translateX(20px); }
   .bottom-nav { max-width: 800px; margin: 0 auto; border-radius: 16px 16px 0 0; }
   .stats-row-4 { grid-template-columns: repeat(4, 1fr); }
 }
+/* REFERRAL CARDS */
+.referral-card-item {
+  background: #fff;
+  border: 1px solid var(--lb-line);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.ref-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.avatar-sm { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px; }
+.avatar-sm.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.avatar-sm.pink { background: linear-gradient(135deg, #ec4899, #db2777); }
+.ref-info { flex: 1; }
+.ref-info b { display: block; font-size: 14px; color: var(--lb-navy); }
+.ref-info small { font-size: 11px; }
+
+.ref-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 10px;
+}
+.ref-stat { text-align: center; }
+.ref-stat b { display: block; font-size: 14px; font-weight: 800; color: var(--lb-navy); }
+.ref-stat span { font-size: 9px; font-weight: 700; color: var(--lb-muted); text-transform: uppercase; }
+
+.badge-pill {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 99px;
+}
+.badge-pill.yellow { background: rgba(245, 179, 1, 0.15); color: #B47B00; }
+.badge-pill.gray { background: rgba(90, 107, 133, 0.1); color: #5B6B85; }
+
+/* HELPERS */
+.items-center { align-items: center; }
+.mt-2 { margin-top: 8px; }
+.mb-2 { margin-bottom: 8px; }
