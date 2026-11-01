@@ -609,3 +609,102 @@ input:checked + .slider-admin:before { transform: translateX(20px); }
 .items-center { align-items: center; }
 .mt-2 { margin-top: 8px; }
 .mb-2 { margin-bottom: 8px; }
+/* =========================================
+   TRANSACTION HISTORY PAGE
+   ========================================= */
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--lb-line);
+  transition: background 0.2s;
+}
+.history-item:last-child {
+  border-bottom: none;
+}
+.history-item:hover {
+  background: #f8fafc;
+}
+
+.history-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  flex-shrink: 0;
+  border: 1px solid transparent; /* Placeholder for border color */
+}
+
+.history-details {
+  flex: 1;
+  min-width: 0;
+}
+.history-details h4 {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--lb-text);
+  margin: 0 0 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-details p {
+  font-size: 11px;
+  color: var(--lb-muted);
+  margin: 0;
+}
+
+.history-amount {
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+  text-align: right;
+}
+.history-amount.positive {
+  color: var(--lb-green);
+}
+.history-amount.negative {
+  color: var(--lb-red);
+}
+
+/* Specific Color Classes for Icons */
+.bg-green-100 { background-color: #dcfce7; color: #166534; border-color: #bbf7d0 !important; }
+.text-green-700 { color: #166534; }
+.border-green-200 { border-color: #bbf7d0; }
+.text-green-600 { color: #16a34a; }
+
+.bg-gold-100 { background-color: #fef9c3; color: #854d0e; border-color: #fde047 !important; }
+.text-gold-700 { color: #854d0e; }
+.border-gold-200 { border-color: #fde047; }
+.text-gold-600 { color: #ca8a04; }
+
+.bg-purple-100 { background-color: #f3e8ff; color: #6b21a8; border-color: #e9d5ff !important; }
+.text-purple-700 { color: #6b21a8; }
+.border-purple-200 { border-color: #e9d5ff; }
+.text-purple-600 { color: #9333ea; }
+
+.bg-red-100 { background-color: #fee2e2; color: #991b1b; border-color: #fecaca !important; }
+.text-red-700 { color: #991b1b; }
+.border-red-200 { border-color: #fecaca; }
+.text-red-600 { color: #dc2626; }
+
+.bg-orange-100 { background-color: #ffedd5; color: #9a3412; border-color: #fed7aa !important; }
+.text-orange-700 { color: #9a3412; }
+.border-orange-200 { border-color: #fed7aa; }
+.text-orange-600 { color: #ea580c; }
+
+.bg-blue-100 { background-color: #dbeafe; color: #1e40af; border-color: #bfdbfe !important; }
+.text-blue-700 { color: #1e40af; }
+.border-blue-200 { border-color: #bfdbfe; }
+.text-blue-600 { color: #2563eb; }
+
+.bg-gray-100 { background-color: #f1f5f9; color: #475569; border-color: #e2e8f0 !important; }
+.text-gray-700 { color: #475569; }
+.border-gray-200 { border-color: #e2e8f0; }
+.text-gray-600 { color: #64748b; }
