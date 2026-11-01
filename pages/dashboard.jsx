@@ -1,101 +1,71 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import Link from 'next/link';
 
+const actions = [
+  { href: '/sign', label: 'Daily sign-in', meta: 'Earn daily', icon: '✦', tone: 'violet' },
+  { href: '/team', label: 'My team', meta: 'Invite & earn', icon: '♧', tone: 'blue' },
+  { href: '/recharge', label: 'Add funds', meta: 'Fast & secure', icon: '＋', tone: 'orange' },
+  { href: '/withdraw', label: 'Withdraw', meta: 'Cash out', icon: '↗', tone: 'purple' },
+  { href: '/packages?vip=true', label: 'VIP plans', meta: 'Grow faster', icon: '♛', tone: 'gold' },
+  { href: '/download', label: 'Get the app', meta: 'On every device', icon: '↓', tone: 'cyan' },
+];
+
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
+  const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    async function fetchData() {
+    let mounted = true;
+    async function load() {
       try {
-        const res = await fetch('/api/auth', { method: 'GET' });
-        if (!res.ok) throw new Error('Failed to load data');
-        
+        const res = await fetch('/api/auth');
+        if (!res.ok) throw new Error('Unable to load your account');
         const data = await res.json();
-        setStats({
-            recharge: parseFloat(data.wallet.balance || 0),
-            income: parseFloat(data.wallet.income_balance || 0),
-            name: data.user.full_name || 'Member',
-            refCode: data.user.referral_code || ''
-        });
+        if (mounted) {
+          setAccount(data);
+          setShowWelcome(true);
+        }
       } catch (err) {
-        console.error(err);
+        if (mounted) setError(err.message);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
-    fetchData();
+    load();
+    return () => { mounted = false; };
   }, []);
 
-  if (loading) return <AppLayout>Loading...</AppLayout>;
+  if (loading) return <AppLayout><div className="premium-inline-loader">Loading your dashboard...</div></AppLayout>;
+  if (error) return <AppLayout><div className="premium-error"><b>We could not load your account</b><span>{error}</span><button onClick={() => window.location.reload()}>Try again</button></div></AppLayout>;
+
+  const user = account?.user || {};
+  const wallet = account?.wallet || {};
+  const stats = account?.stats || {};
+  const firstName = user.full_name?.split(' ')[0] || 'Member';
 
   return (
     <AppLayout>
-      {/* HERO SECTION */}
-      <div className="hero-banner">
-        <div className="banner-content">
-          <h2 className="brand-logo-lg">LEBARA</h2>
-          <p className="tagline">Voice & Data Solutions</p>
-        </div>
-        {/* Carousel Dots Placeholder */}
-        <div className="carousel-dots">
-           <span className="dot active"></span>
-           <span className="dot"></span>
-           <span className="dot"></span>
-        </div>
-      </div>
+      <section className="premium-greeting"><div><span className="eyebrow">WELCOME BACK</span><h1>Hi, {firstName} <span>✦</span></h1><p>Everything you need, all in one place.</p></div><div className="profile-chip">{firstName.charAt(0).toUpperCase()}</div></section>
 
-      {/* LIVE TICKER */}
-      <div className="ticker-wrap">
-        <div className="ticker-move">
-          <span>🔥 user M***5 deposited ₦1,000</span>
-          <span>✨ user J***8 earned ₦500 commission</span>
-          <span>💎 New VIP package launched!</span>
-        </div>
-      </div>
+      <section className="premium-balance-card">
+        <div className="balance-card-top"><span>Total available balance</span><Link href="/history">View history ›</Link></div>
+        <strong>₦{(Number(wallet.balance) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+        <div className="balance-card-bottom"><span>Income balance</span><b>₦{(Number(wallet.income_balance) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b><Link href="/recharge">＋ Add funds</Link></div>
+      </section>
 
-      {/* ACTION GRID */}
-      <div className="action-grid-card">
-        <div className="grid-row">
-          <Link href="/sign" className="grid-item">
-            <div className="icon-circle red"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 9h-2V7h-2v5H6v2h2v5h2v-5h2v-2z"/></svg></div>
-            <span>Sign</span>
-          </Link>
-          <Link href="/team" className="grid-item">
-            <div className="icon-circle blue"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
-            <span>My team</span>
-          </Link>
-          <Link href="/recharge" className="grid-item">
-            <div className="icon-circle orange"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg></div>
-            <span>Recharge</span>
-          </Link>
-          <Link href="/withdraw" className="grid-item">
-            <div className="icon-circle purple"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></div>
-            <span>Withdraw</span>
-          </Link>
-        </div>
-        <div className="grid-row">
-          <Link href="/packages?vip=true" className="grid-item">
-            <div className="icon-circle gold"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
-            <span>VIP</span>
-          </Link>
-          <Link href="/team" className="grid-item">
-            <div className="icon-circle magenta"><svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
-            <span>Invite</span>
-          </Link>
-          <Link href="/download" className="grid-item">
-            <div className="icon-circle cyan"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></div>
-            <span>Download</span>
-          </Link>
-          <Link href="/profile" className="grid-item">
-            <div className="icon-circle navy"><svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9v7c0 1.1.9 2 2 2h4v-8H5v-1c0-3.87 3.13-7 7-7s7 3.13 7 7v1h-4v8h4c1.1 0 2-.9 2-2v-7c0-4.97-4.03-9-9-9z"/></svg></div>
-            <span>Service</span>
-          </Link>
-        </div>
-      </div>
-      
-      {/* RECENT ACTIVITY LIST COULD GO HERE */}
+      <section className="premium-promo"><div><span className="eyebrow">MEMBER BENEFIT</span><h2>Grow your rewards</h2><p>Invite friends and unlock higher VIP earnings.</p><Link href="/team">Explore team rewards <span>→</span></Link></div><div className="promo-orb">✦</div></section>
+
+      <div className="premium-section-heading"><div><span className="eyebrow">QUICK ACCESS</span><h2>What would you like to do?</h2></div><Link href="/support">Help ›</Link></div>
+      <section className="premium-action-grid">
+        {actions.map((action) => <Link href={action.href} key={action.label} className="premium-action"><span className={`action-icon ${action.tone}`}>{action.icon}</span><b>{action.label}</b><small>{action.meta}</small></Link>)}
+      </section>
+
+      <section className="premium-stats-row"><div><b>{stats.activePackages || 0}</b><span>Active plans</span></div><div><b>{user.referral_code || '—'}</b><span>Referral code</span></div><div><b>VIP {stats.vipLevel || 0}</b><span>Current level</span></div></section>
+
+      {showWelcome && <div className="premium-modal-backdrop" role="dialog" aria-modal="true"><div className="premium-modal"><button className="modal-close" onClick={() => setShowWelcome(false)} aria-label="Close">×</button><div className="modal-sparkle">✦</div><span className="eyebrow">LEBARA MEMBER UPDATE</span><h2>Welcome to your premium space</h2><p>Stay consistent, collect daily rewards, and unlock more value from your account.</p><Link href="/sign" className="modal-primary" onClick={() => setShowWelcome(false)}>View daily rewards →</Link><button className="modal-secondary" onClick={() => setShowWelcome(false)}>Maybe later</button></div></div>}
     </AppLayout>
   );
 }
