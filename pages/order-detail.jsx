@@ -1,98 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import AppLayout from '../components/AppLayout';
 
+const money = (value) => `₦${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
 export default function OrderDetail() {
-  const router = useRouter();
-  const { id } = router.query;
-  const [pkg, setPkg] = useState(null);
-  const [balance, setBalance] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!id) return;
-    async function fetchDetails() {
-      try {
-        const res = await fetch(`/api/packages/detail?id=${id}`);
-        if (!res.ok) throw new Error('Package not found');
-        const data = await res.json();
-        setPkg(data.pkg);
-        setBalance(data.balance);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchDetails();
-  }, [id]);
-
-  const handleBuy = async () => {
-    if (!confirm(`Confirm purchase of ${pkg.name} for ₦${parseFloat(pkg.price).toLocaleString()}?`)) return;
-    
-    setProcessing(true);
-    setError('');
-    try {
-      const res = await fetch('/api/packages/buy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId: pkg.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Purchase failed');
-      
-      alert('Purchase successful! Check your Orders page.');
-      router.push('/orders');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  if (loading) return <AppLayout>Loading...</AppLayout>;
-  if (error && !pkg) return <AppLayout>Error: {error}</AppLayout>;
-
-  const remaining = Math.max(0, balance - parseFloat(pkg?.price || 0));
-
-  return (
-    <AppLayout title="Confirm Purchase">
-      {!pkg ? <div className="empty-state">Package not found.</div> : (
-        <div className="card-form">
-          <h3>{pkg.name}</h3>
-          <div className="figs" style={{ marginBottom: '20px' }}>
-            <div className="fig-row"><span>Investment Amount</span><b>₦{parseFloat(pkg.price).toLocaleString()}</b></div>
-            <div className="fig-row"><span>Daily Yield</span><b className="gold">₦{parseFloat(pkg.daily_income).toLocaleString()}</b></div>
-            <div className="fig-row"><span>Duration</span><b>{pkg.days} Days</b></div>
-            <div className="fig-row"><span>Total Return</span><b className="gold">₦{parseFloat(pkg.total_income).toLocaleString()}</b></div>
-          </div>
-
-          <div className="summary-box" style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
-            <div className="fig-row"><span>Your Balance</span><b>₦{balance.toLocaleString()}</b></div>
-            <div className="fig-row"><span>Cost</span><b>-₦{parseFloat(pkg.price).toLocaleString()}</b></div>
-            <hr style={{ border: 0, borderTop: '1px solid #e2e8f0', margin: '8px 0' }} />
-            <div className="fig-row"><span>Remaining After Buy</span><b>₦{remaining.toLocaleString()}</b></div>
-          </div>
-
-          {error && <div className="msg error">{error}</div>}
-
-          <button 
-            className="btn-primary" 
-            onClick={handleBuy} 
-            disabled={processing || balance < parseFloat(pkg.price)}
-          >
-            {processing ? 'Processing...' : balance < parseFloat(pkg.price) ? 'Insufficient Balance' : 'Confirm Purchase'}
-          </button>
-          
-          {balance < parseFloat(pkg.price) && (
-            <div className="text-center mt-2">
-              <Link href="/recharge" className="muted text-sm underline">Top up wallet →</Link>
-            </div>
-          )}
-        </div>
-      )}
-    </AppLayout>
-  );
+  const router = useRouter(); const { id } = router.query;
+  const [pkg, setPkg] = useState(null); const [balance, setBalance] = useState(0); const [loading, setLoading] = useState(true); const [processing, setProcessing] = useState(false); const [error, setError] = useState('');
+  useEffect(() => { if (!id) return; let mounted = true; fetch(`/api/packages/detail?id=${id}`).then((res) => res.ok ? res.json() : Promise.reject(new Error('Package not found'))).then((data) => { if (mounted) { setPkg(data.pkg); setBalance(Number(data.balance) || 0); } }).catch((err) => mounted && setError(err.message)).finally(() => mounted && setLoading(false)); return () => { mounted = false; }; }, [id]);
+  async function handleBuy() { if (!pkg || processing) return; if (!window.confirm(`Confirm purchase of ${pkg.name} for ${money(pkg.price)}?`)) return; setProcessing(true); setError(''); try { const res = await fetch('/api/packages/buy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packageId: pkg.id }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Purchase failed'); router.push('/orders'); } catch (err) { setError(err.message); setProcessing(false); } }
+  if (loading) return <AppLayout title="Plan details"><section className="order-detail-loading"><div className="detail-skeleton hero" /><div className="detail-skeleton" /><div className="detail-skeleton" /><span className="premium-spinner" />Loading plan details…</section></AppLayout>;
+  if (error && !pkg) return <AppLayout title="Plan details"><section className="order-detail-empty"><span>!</span><h2>Plan unavailable</h2><p>{error}</p><Link href="/packages">Back to packages →</Link></section></AppLayout>;
+  const price = Number(pkg?.price) || 0; const daily = Number(pkg?.daily_income) || 0; const total = Number(pkg?.total_income) || 0; const days = Number(pkg?.days) || 0; const remaining = Math.max(0, balance - price); const affordable = balance >= price; const roi = price ? Math.round((total / price) * 100) : 0;
+  return <AppLayout title="Plan details"><section className={`order-detail-hero ${pkg.category === 'vip' ? 'vip' : ''}`}><div className="order-detail-art">{pkg.image_url ? <img src={pkg.image_url} alt="" /> : pkg.category === 'vip' ? '♛' : '◈'}</div><div><span className="eyebrow">{pkg.category === 'vip' ? 'VIP COLLECTION' : 'STANDARD COLLECTION'}</span><h1>{pkg.name}</h1><p>Designed for consistent daily rewards.</p></div><span className="detail-badge">{days} DAYS</span></section><section className="order-detail-card"><div className="detail-card-heading"><div><span className="eyebrow">PLAN OVERVIEW</span><h2>Your projected return</h2></div><span className="roi-badge">{roi}% RETURN</span></div><div className="detail-primary-amount"><span>Entry amount</span><strong>{money(price)}</strong></div><div className="detail-metrics"><div><span>Daily income</span><b>{money(daily)}</b></div><div><span>Plan duration</span><b>{days} days</b></div><div><span>Total return</span><b>{money(total)}</b></div></div><div className="detail-breakdown"><div><span>Daily credit</span><b>{money(daily)} × {days} days</b></div><div><span>Projected profit</span><b className="green-text">{money(Math.max(0, total - price))}</b></div><div><span>Current wallet</span><b>{money(balance)}</b></div></div>{error && <div className="moneyflow-alert error">{error}</div>}<button className="detail-purchase-button" onClick={handleBuy} disabled={processing || !affordable}>{processing ? 'Activating your plan…' : affordable ? 'Confirm & activate plan  →' : 'Insufficient wallet balance'}</button>{!affordable && <Link href="/recharge" className="detail-fund-link">Add funds to continue →</Link>}<p className="detail-disclaimer">By activating this plan, the entry amount will be deducted from your wallet and the plan will begin according to the displayed schedule.</p></section><section className="detail-wallet-summary"><div><span>Balance after activation</span><strong>{money(remaining)}</strong></div><Link href="/orders">View my products ›</Link></section><div className="detail-help"><span>Need help before activating?</span><Link href="/support">Contact support ›</Link></div></AppLayout>;
 }
