@@ -20,7 +20,7 @@ export default function AdminLayout({ children, title }) {
           setIsAdmin(true);
         }
       })
-      .catch(() => router.push('/login'))
+      .catch(() => router.push('/'))
       .finally(() => setLoading(false));
   }, [router]);
 
