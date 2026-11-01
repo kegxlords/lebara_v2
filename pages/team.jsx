@@ -2,79 +2,73 @@ import { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 
 export default function TeamPage() {
-  const [team, setTeam] = useState([]);
-  const [stats, setStats] = useState({ l1Count: 0, l1Active: 0, totalComm: 0 });
-  const [loading, setLoading] = useState(true);
+  const [teamData, setTeamData] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     async function fetchTeam() {
-      const res = await fetch('/api/user/team');
+      const res = await fetch('/api/team'); // Assuming /api/team returns members + stats
       if (res.ok) {
-        const data = await res.json();
-        setTeam(data.members);
-        setStats(data.stats);
+        setTeamData(await res.json());
       }
-      setLoading(false);
     }
     fetchTeam();
   }, []);
 
+  if (!teamData) return <AppLayout>Loading...</AppLayout>;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(teamData.inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <AppLayout title="My Team">
-      {/* SUMMARY CARDS */}
-      <div className="grid-cards">
-        <div className="stat-card">
-          <span className="label">Direct Referrals</span>
-          <span className="value">{stats.l1Count}</span>
+      
+      {/* STATS ROW */}
+      <div className="stats-row-4">
+        <div className="stat-mini"><b>{teamData.stats.directCount}</b><span>DIRECT</span></div>
+        <div className="stat-mini"><b>{teamData.stats.level2Count}</b><span>LEVEL-2</span></div>
+        <div className="stat-mini highlight"><b>{teamData.stats.activatedCount}</b><span>ACTIVATED</span></div>
+        <div className="stat-mini money"><b>₦{parseFloat(teamData.stats.totalDeposits).toLocaleString()}</b><span>TEAM DEPOSITS</span></div>
+      </div>
+
+      {/* INVITATION CARD */}
+      <div className="invite-card">
+        <label>YOUR INVITATION CODE</label>
+        <div className="code-display">
+          <h2>{teamData.referralCode}</h2>
+          <button className="btn-copy-sm" onClick={() => navigator.clipboard.writeText(teamData.referralCode)}>Copy code</button>
         </div>
-        <div className="stat-card gold">
-          <span className="label">Activated Members</span>
-          <span className="value">{stats.l1Active}</span>
-        </div>
-        <div className="stat-card">
-          <span className="label">Total Commission</span>
-          <span className="value">₦{stats.totalComm.toLocaleString()}</span>
+        
+        <div className="link-box">
+          <input type="text" readOnly value={teamData.inviteLink} />
+          <button className={`btn-copy-link ${copied ? 'success' : ''}`} onClick={handleCopy}>
+            {copied ? 'Copied!' : 'Copy link'}
+          </button>
         </div>
       </div>
 
-      {/* INVITE LINK BOX */}
-      <div className="card-form" style={{ marginBottom: '20px', background: '#f0fdf4', borderColor: '#bbf7d0' }}>
-        <h4 style={{ color: '#166534', marginBottom: '8px' }}>Share Your Link</h4>
-        <p className="muted text-sm mb-2">Earn commission when they deposit!</p>
-        <div className="input-group" style={{ background: '#fff', borderRadius: '8px', padding: '8px' }}>
-           <code style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-             https://lebara-ng.cyou/register?ref=YOUR_CODE
-           </code>
-           <button className="q-btn" style={{ marginLeft: '8px' }}>Copy</button>
+      {/* VIP PROGRESS */}
+      <div className="vip-progress-card">
+        <div className="vip-header">
+          <span className="diamond-icon">💎</span>
+          <h3>VIP Level {teamData.currentVipLevel}</h3>
+        </div>
+        <p className="vip-desc">{teamData.nextTierRequirement}</p>
+        
+        <div className="progress-bar-container">
+          <div className="progress-fill" style={{ width: `${teamData.progressPercent}%` }}></div>
+        </div>
+        
+        <div className="tier-chips">
+          <span className="chip inactive">&gt;VIP 1 · 3 activated</span>
+          <span className="chip inactive">&gt;VIP 2 · 5 activated</span>
+          <span className="chip inactive">&gt;VIP 3 · 10 activated</span>
         </div>
       </div>
 
-      {/* MEMBERS LIST */}
-      <div className="section-title">My Members (Level 1)</div>
-      <div className="list-container">
-        {loading ? <div className="empty-state">Loading team...</div> : (
-          team.length === 0 ? (
-            <div className="empty-state">You haven't referred anyone yet.<br/>Share your link above!</div>
-          ) : (
-            team.map(member => (
-              <div key={member.id} className="list-item">
-                <div>
-                  <strong>{member.full_name || 'Member'}</strong>
-                  <small className="block muted">{member.phone}</small>
-                  <small className={`badge ${member.activated_at ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`} 
-                         style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '10px', marginTop: '4px', display: 'inline-block' }}>
-                    {member.activated_at ? 'ACTIVE' : 'PENDING'}
-                  </small>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span className="amt-pos block">+₦{parseFloat(member.commission_earned || 0).toLocaleString()}</span>
-                  <small className="muted">from deposits</small>
-                </div>
-              </div>
-            ))
-          )
-        )}
-      </div>
     </AppLayout>
   );
 }
