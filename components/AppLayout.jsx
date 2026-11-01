@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { supabasePublic } from '../lib/supabase'; // Use public client for simple reads if RLS allows, else fetch via API
 
 export default function AppLayout({ children, title = "" }) {
   const router = useRouter();
@@ -12,10 +11,10 @@ export default function AppLayout({ children, title = "" }) {
   useEffect(() => {
     async function getBal() {
       try {
-        // Call our Auth Me endpoint or direct Supabase read
-        const res = await fetch('/api/auth/me');
+        // Use the unified auth endpoint implemented in pages/api/auth.js.
+        const res = await fetch('/api/auth');
         if (!res.ok) {
-          router.push('/login');
+          router.push('/');
           return;
         }
         const data = await res.json();
