@@ -2,11 +2,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
-function PremiumLoader() {
+function PremiumLoader({ error, onRetry }) {
   return (
     <div className="premium-loader" role="status" aria-label="Loading Lebara">
       <div className="loader-orbit"><span>LEBARA</span></div>
-      <div className="loader-copy"><b>Preparing your experience</b><small>Securely loading your account</small></div>
+      <div className="loader-copy">
+        <b>{error ? 'Connection took too long' : 'Preparing your experience'}</b>
+        <small>{error || 'Securely loading your account'}</small>
+        {error && <button type="button" className="loader-retry" onClick={onRetry}>Try again</button>}
+      </div>
     </div>
   );
 }
@@ -23,30 +27,36 @@ export default function AppLayout({ children, title = '' }) {
   const router = useRouter();
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     let mounted = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     async function getAccount() {
       try {
-        const res = await fetch('/api/auth');
-        if (!res.ok) {
+        const res = await fetch('/api/auth', { signal: controller.signal, cache: 'no-store' });
+        if (res.status === 401 || res.status === 403) {
           router.replace('/');
           return;
         }
+        if (!res.ok) throw new Error('Account service is temporarily unavailable.');
         const data = await res.json();
-        if (mounted) setBalance(Number(data.wallet?.balance) || 0);
+        if (mounted) { setBalance(Number(data.wallet?.balance) || 0); setLoadError(''); }
       } catch (error) {
-        console.error(error);
-        if (mounted) router.replace('/');
+        if (mounted) setLoadError(error.name === 'AbortError' ? 'The server did not respond. Check your connection and try again.' : 'Unable to reach your account. Check your connection and try again.');
       } finally {
+        clearTimeout(timeout);
         if (mounted) setLoading(false);
       }
     }
     getAccount();
-    return () => { mounted = false; };
-  }, [router]);
+    return () => { mounted = false; clearTimeout(timeout); controller.abort(); };
+  }, [router, retryToken]);
 
   if (loading) return <PremiumLoader />;
+  if (loadError) return <PremiumLoader error={loadError} onRetry={() => { setLoadError(''); setLoading(true); setRetryToken((value) => value + 1); }} />;
 
   return (
     <div className="app-shell premium-shell">
