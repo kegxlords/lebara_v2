@@ -59,8 +59,9 @@ export default async function handler(req, res) {
   if (!orderRef || !platformOsn || !status) return respond(res, 400, 'MISSING-FIELDS');
 
   const isAdminPayout = orderRef.startsWith('ADM-WD-');
+  const isAdminTopup = orderRef.startsWith('ADM-DEP-');
   const isPayout = isAdminPayout || payload.time_transfered !== undefined || orderRef.startsWith('WD-');
-  const isDeposit = !isPayout && (payload.amount_need !== undefined || orderRef.startsWith('DEP-'));
+  const isDeposit = isAdminTopup || (!isPayout && (payload.amount_need !== undefined || orderRef.startsWith('DEP-')));
   if (!isDeposit && !isPayout) return respond(res, 400, 'UNKNOWN-TYPE');
   if (isPayout && !['1', '9'].includes(status)) return respond(res, 400, 'INVALID-PAYOUT-STATUS');
 
@@ -69,7 +70,18 @@ export default async function handler(req, res) {
     let signatureInput;
     let alreadyProcessed = false;
 
-    if (isDeposit) {
+    if (isDeposit && isAdminTopup) {
+      const { data, error } = await supabaseAdmin.from('admin_gateway_ledger')
+        .select('id, amount, status, order_sn')
+        .eq('order_sn', orderRef).eq('direction', 'top_up').maybeSingle();
+      if (error) throw error;
+      record = data;
+      if (!record || record.order_sn !== orderRef) return respond(res, 404, 'ORDER-NOT-FOUND');
+      const originalAmount = amountToTwoDecimals(record.amount);
+      if (!originalAmount) return respond(res, 400, 'INVALID-ORDER-AMOUNT');
+      signatureInput = `${ak}${platformOsn}${status}${originalAmount}${sk}`;
+      alreadyProcessed = ['paid', 'failed', 'completed'].includes(record.status);
+    } else if (isDeposit) {
       const { data, error } = await supabaseAdmin.from('recharge_requests')
         .select('id, amount, user_id, status, provider_ref')
         .eq('provider_ref', orderRef).maybeSingle();
@@ -110,7 +122,12 @@ export default async function handler(req, res) {
     if (!signatureMatches(expected, payload.sign)) return respond(res, 401, 'BAD-SIGNATURE');
     if (alreadyProcessed) return respond(res, 200, 'SUCCESS');
 
-    if (isDeposit) {
+    if (isDeposit && isAdminTopup) {
+      const { error } = await supabaseAdmin.from('admin_gateway_ledger')
+        .update({ status: status === '1' ? 'paid' : 'failed', platform_osn: platformOsn, updated_at: new Date().toISOString() })
+        .eq('id', record.id).eq('status', 'processing');
+      if (error) throw error;
+    } else if (isDeposit) {
       if (status === '1') {
         const { error } = await supabaseAdmin.rpc('apply_deposit_success_with_referral_bonus', {
           p_user_id: record.user_id,
