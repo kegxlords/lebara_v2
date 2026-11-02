@@ -29,6 +29,17 @@ export default async function handler(req, res) {
   const grossAmount = parseAmount(amount);
   if (!grossAmount) return res.status(400).json({ error: 'Enter a valid amount with up to two decimal places.' });
 
+  const { count: activePackages, error: packageError } = await supabaseAdmin
+    .from('user_packages')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('status', 'active');
+  if (packageError) {
+    console.error('Active package check failed:', packageError.message);
+    return res.status(503).json({ error: 'We could not verify your active package. Please try again.' });
+  }
+  if (!activePackages) return res.status(403).json({ error: 'You need at least one active package before you can withdraw earned income.' });
+
   let settings;
   try { settings = await getSiteSettings(); }
   catch (error) {
