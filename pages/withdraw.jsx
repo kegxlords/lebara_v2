@@ -28,7 +28,7 @@ export default function WithdrawPage() {
   const [amount, setAmount] = useState('');
   const [pin, setPin] = useState('');
   const [balance, setBalance] = useState(0);
-  const [settings, setSettings] = useState({ min: 1000, max: 1000000, feePct: 0, feeFixed: 0, manual: false });
+  const [settings, setSettings] = useState({ min: 1000, max: 1000000, dailyLimit: 3, feePct: 0, feeFixed: 0, manual: false });
   const [windowStatus, setWindowStatus] = useState({ isOpen: true, label: 'Schedule loading' });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -51,6 +51,7 @@ export default function WithdrawPage() {
           const next = {
             min: Number.isFinite(parsedMin) ? parsedMin : 1000,
             max: Number.isFinite(parsedMax) ? parsedMax : 1000000,
+            dailyLimit: Math.max(1, Math.min(100, Number(data.wd_daily_limit) || 3)),
             feePct: Number(data.withdrawal_fee_pct) || 0,
             feeFixed: Number(data.withdrawal_fee_fixed) || 0,
             manual: data.withdrawal_mode === 'manual'
@@ -92,7 +93,7 @@ export default function WithdrawPage() {
   return <AppLayout title="Withdraw">
     <section className="moneyflow-hero withdraw-hero"><div className="moneyflow-icon">↗</div><div><span className="eyebrow">SECURE PAYOUTS</span><h1>Move money home</h1><p>Withdraw your earned income directly to your bank.</p></div><span className={`secure-badge ${windowStatus.isOpen ? 'open' : 'closed'}`}>{windowStatus.isOpen ? 'Open' : 'Closed'}</span></section>
     <section className="withdraw-balance"><div><span>Available income</span><strong>{loading ? 'Loading…' : money(balance)}</strong></div><div className="balance-caption">Only earned income is withdrawable</div></section>
-    <div className={`payout-status ${windowStatus.isOpen ? 'open' : 'closed'}`}><span>{windowStatus.isOpen ? '✓' : '◷'}</span><div><b>{windowStatus.isOpen ? 'Payouts are open' : 'Payout window is closed'}</b><small>{windowStatus.isOpen ? (settings.manual ? 'Requests wait for administrator approval' : 'Requests are sent to the payout gateway') : 'Available during the configured schedule'}</small></div><strong>{windowStatus.label}</strong></div>
+    <div className={`payout-status ${windowStatus.isOpen ? 'open' : 'closed'}`}><span>{windowStatus.isOpen ? '✓' : '◷'}</span><div><b>{windowStatus.isOpen ? 'Payouts are open' : 'Payout window is closed'}</b><small>{windowStatus.isOpen ? `${settings.manual ? 'Requests wait for administrator approval. ' : 'Requests are sent to the payout gateway. '}Up to ${settings.dailyLimit} withdrawal${settings.dailyLimit === 1 ? '' : 's'} per day.` : 'Available during the configured schedule'}</small></div><strong>{windowStatus.label}</strong></div>
     <form className="moneyflow-card withdraw-form" onSubmit={handleSubmit}>
       <div className="moneyflow-card-heading"><div><span className="eyebrow">SECURE REQUEST</span><h2>Withdrawal details</h2></div><span className="step-complete">Protected</span></div>
       {error && <div className="moneyflow-alert error">{error}</div>}{success && <div className="moneyflow-alert success">{success}<Link href="/history">View transaction history ›</Link></div>}
