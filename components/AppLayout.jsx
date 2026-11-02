@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { AppIcon } from './Icons';
 
 function PremiumLoader({ error, onRetry }) {
   return (
@@ -16,11 +17,11 @@ function PremiumLoader({ error, onRetry }) {
 }
 
 const navItems = [
-  { href: '/dashboard', label: 'Home', icon: '⌂' },
-  { href: '/packages', label: 'Plans', icon: '▣' },
-  { href: '/orders', label: 'Orders', icon: '▤' },
-  { href: '/team', label: 'Team', icon: '♧' },
-  { href: '/profile', label: 'My', icon: '◉' },
+  { href: '/dashboard', label: 'Home', icon: 'home' },
+  { href: '/packages', label: 'Packages', icon: 'packages' },
+  { href: '/orders', label: 'Orders', icon: 'orders' },
+  { href: '/team', label: 'Team', icon: 'team' },
+  { href: '/profile', label: 'My', icon: 'profile' },
 ];
 
 export default function AppLayout({ children, title = '' }) {
@@ -73,7 +74,7 @@ export default function AppLayout({ children, title = '' }) {
       <nav className="bottom-nav premium-nav" aria-label="Primary navigation">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href} className={`nav-item premium-nav-item ${router.pathname === item.href ? 'active' : ''}`}>
-            <span className="nav-glyph">{item.icon}</span>
+            <span className="nav-glyph"><AppIcon name={item.icon} size={23} /></span>
             <span>{item.label}</span>
           </Link>
         ))}
