@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { AppIcon } from './icons';
+import { AppIcon } from './Icons';
 
 function PremiumLoader({ error, onRetry }) {
   return (
