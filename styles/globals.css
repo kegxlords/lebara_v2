@@ -1316,3 +1316,113 @@ input:checked + .slider-admin:before { transform: translateX(20px); }
 .admin-adjust-fields .admin-button { min-height: 47px; }
 .admin-adjust-form > small { display: block; margin-top: 12px; color: #868d99; font-size: 11px; }
 @media (max-width: 620px) { .admin-adjust-fields { grid-template-columns: 1fr; } }
+
+
+/* Support and withdrawal pages: explicit layouts for the premium markup. */
+.support-hero {
+  position: relative;
+  overflow: hidden;
+  margin: 8px 18px 14px;
+  padding: 22px 20px;
+  border-radius: 22px;
+  color: #fff;
+  background: linear-gradient(125deg, #17245c, #3747a5 55%, #5e36ab);
+  box-shadow: 0 16px 32px rgba(48, 45, 150, .18);
+}
+.support-orb {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 14px;
+  background: rgba(255,255,255,.14);
+  color: #fff;
+  font-size: 23px;
+}
+.support-hero .eyebrow { display: block; color: rgba(255,255,255,.68); }
+.support-hero h1 { margin-top: 5px; color: #fff; font-size: clamp(27px, 7vw, 36px); line-height: 1.12; letter-spacing: -.04em; }
+.support-hero p { max-width: 42ch; margin-top: 8px; color: rgba(255,255,255,.78); font-size: 14px; line-height: 1.55; }
+
+.whatsapp-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  margin: 0 18px 14px;
+  padding: 17px;
+  border: 1px solid var(--premium-border, #e2e8f0);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: var(--premium-shadow, 0 10px 26px rgba(28,43,80,.07));
+}
+.whatsapp-mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; color: #fff; background: linear-gradient(135deg, #18a86b, #07844f); font-size: 22px; font-weight: 900; }
+.whatsapp-copy { min-width: 0; }
+.whatsapp-copy .eyebrow { display: block; }
+.whatsapp-copy h2 { margin-top: 4px; color: var(--premium-ink, #17233e); font-size: 18px; line-height: 1.25; letter-spacing: -.025em; }
+.whatsapp-copy p { margin-top: 6px; color: var(--premium-muted, #718096); font-size: 12px; line-height: 1.55; }
+.whatsapp-join { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 43px; border-radius: 12px; color: #fff; background: linear-gradient(110deg, #15945d, #1ab876); font-size: 12px; font-weight: 900; }
+.whatsapp-link-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 9px 10px; border: 1px solid #e6eaf1; border-radius: 11px; color: var(--premium-muted, #718096); background: #f8faff; font-size: 11px; line-height: 1.45; }
+.whatsapp-link-row code { flex: 1; min-width: 0; overflow-wrap: anywhere; color: #58657a; font-size: 10px; }
+.whatsapp-link-row button { flex: 0 0 auto; padding: 7px 10px; border-radius: 8px; color: #fff; background: var(--premium-violet, #5b35d5); font-size: 10px; font-weight: 900; }
+.support-options { display: grid; gap: 9px; margin: 0 18px 22px; }
+.support-options > a { display: grid; grid-template-columns: 38px minmax(0, 1fr) 20px; align-items: center; gap: 11px; min-width: 0; padding: 13px; border: 1px solid var(--premium-border, #e2e8f0); border-radius: 15px; color: var(--premium-ink, #17233e); background: #fff; box-shadow: 0 7px 20px rgba(28,43,80,.035); }
+.support-options > a > span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; color: var(--premium-violet, #5b35d5); background: #f0edff; font-size: 17px; font-weight: 900; }
+.support-options > a > div { min-width: 0; }
+.support-options > a b, .support-options > a small { display: block; overflow-wrap: anywhere; }
+.support-options > a b { font-size: 12px; line-height: 1.35; }
+.support-options > a small { margin-top: 3px; color: var(--premium-muted, #718096); font-size: 10px; line-height: 1.4; }
+.support-options > a strong { justify-self: end; color: #98a3b7; font-size: 20px; }
+
+.withdraw-balance { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 18px 11px; padding: 13px 15px; border: 1px solid var(--premium-border, #e2e8f0); border-radius: 16px; background: #fff; box-shadow: 0 8px 20px rgba(28,43,80,.04); }
+.withdraw-balance > div:first-child { min-width: 0; }
+.withdraw-balance span, .withdraw-balance strong { display: block; }
+.withdraw-balance span { color: var(--premium-muted, #718096); font-size: 10px; line-height: 1.4; }
+.withdraw-balance strong { margin-top: 4px; color: var(--premium-ink, #17233e); font-size: 19px; line-height: 1.2; }
+.balance-caption { max-width: 42%; color: var(--premium-muted, #718096); font-size: 10px; line-height: 1.45; text-align: right; }
+.payout-status { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: 4px 10px; margin: 0 18px 13px; padding: 12px 13px; border: 1px solid #ccebdc; border-radius: 15px; color: #256b4d; background: #f0fbf5; }
+.payout-status.closed { border-color: #f1d8c4; color: #9a5e2d; background: #fff8f1; }
+.payout-status > span { grid-row: 1 / span 2; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #fff; background: #2b9b69; font-size: 15px; font-weight: 900; }
+.payout-status.closed > span { background: #d88b4f; }
+.payout-status > div { min-width: 0; }
+.payout-status > div b, .payout-status > div small { display: block; }
+.payout-status > div b { font-size: 11px; line-height: 1.35; }
+.payout-status > div small { margin-top: 3px; color: #6e8f7e; font-size: 9px; line-height: 1.4; }
+.payout-status.closed > div small { color: #a8876d; }
+.payout-status > strong { grid-column: 2; color: inherit; font-size: 9px; line-height: 1.4; }
+.withdraw-form { margin-top: 0; }
+.bank-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; }
+.bank-label a { flex: 0 0 auto; color: var(--premium-violet, #5b35d5); font-size: 10px; font-weight: 900; }
+.bank-list { display: grid; gap: 8px; margin: 0 0 14px; }
+.bank-card { display: grid; grid-template-columns: 34px minmax(0, 1fr) 20px; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 11px; border: 1px solid #dfe6f0; border-radius: 13px; color: var(--premium-ink, #17233e); background: #fff; text-align: left; }
+.bank-card.selected { border-color: #8d7ae2; background: #f7f5ff; box-shadow: 0 0 0 2px rgba(91,53,213,.08); }
+.bank-emblem { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; color: #fff; background: linear-gradient(135deg, #5a35d0, #3e75d7); font-size: 15px; font-weight: 900; }
+.bank-card > span:nth-child(2) { display: block; min-width: 0; }
+.bank-card b, .bank-card small { display: block; overflow-wrap: anywhere; }
+.bank-card b { font-size: 11px; line-height: 1.35; }
+.bank-card small { margin-top: 3px; color: var(--premium-muted, #718096); font-size: 9px; line-height: 1.4; }
+.bank-card > i { justify-self: end; color: var(--premium-violet, #5b35d5); font-size: 15px; font-style: normal; font-weight: 900; }
+.empty-bank { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: 8px 10px; margin-bottom: 14px; padding: 12px; border: 1px dashed #ccd5e4; border-radius: 13px; background: #fafbfe; }
+.empty-bank > span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--premium-violet, #5b35d5); background: #f0edff; font-size: 17px; }
+.empty-bank > div { min-width: 0; }
+.empty-bank b, .empty-bank small { display: block; }
+.empty-bank b { color: var(--premium-ink, #17233e); font-size: 11px; line-height: 1.35; }
+.empty-bank small { margin-top: 3px; color: var(--premium-muted, #718096); font-size: 9px; line-height: 1.45; }
+.empty-bank > a { grid-column: 2; justify-self: start; color: var(--premium-violet, #5b35d5); font-size: 10px; font-weight: 900; }
+.pin-input-wrap { display: flex; align-items: center; gap: 9px; height: 48px; margin-bottom: 13px; padding: 0 12px; border: 1.5px solid #dce4ef; border-radius: 13px; background: #fafbfe; }
+.pin-input-wrap:focus-within { border-color: #6952d7; box-shadow: 0 0 0 4px rgba(91,53,213,.08); background: #fff; }
+.pin-input-wrap > span { flex: 0 0 auto; color: var(--premium-violet, #5b35d5); font-size: 18px; }
+.pin-input-wrap input { flex: 1; min-width: 0; height: 100%; border: 0; color: var(--premium-ink, #17233e); background: transparent; font-size: 14px; }
+.pin-input-wrap > small { flex: 0 0 auto; color: #9aa5b7; font-size: 9px; }
+.withdrawal-summary { margin-top: 12px; }
+.withdrawal-button { margin-top: 2px; }
+@media (max-width: 380px) {
+  .support-hero, .whatsapp-card, .support-options > a, .withdraw-balance, .payout-status, .withdraw-form { border-radius: 14px; }
+  .support-hero { padding: 18px 16px; }
+  .whatsapp-card { grid-template-columns: 34px minmax(0, 1fr); gap: 9px; padding: 13px; }
+  .whatsapp-mark { width: 34px; height: 34px; border-radius: 11px; }
+  .whatsapp-copy h2 { font-size: 16px; }
+  .balance-caption { max-width: 40%; font-size: 9px; }
+  .withdraw-form { margin-right: 12px; margin-left: 12px; padding: 14px; }
+}
