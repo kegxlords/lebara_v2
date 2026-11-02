@@ -2,62 +2,61 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
+const links = [
+  { id: 'overview', label: 'Overview', icon: '▦' },
+  { id: 'users', label: 'Users', icon: '♙' },
+  { id: 'deposits', label: 'Deposits', icon: '₦' },
+  { id: 'withdrawals', label: 'Withdrawals', icon: '↗' },
+  { id: 'gateway', label: 'Gateway', icon: '◎' },
+  { id: 'packages', label: 'Packages', icon: '▣' },
+  { id: 'gift-codes', label: 'Gift code', icon: '✦' },
+  { id: 'settings', label: 'Settings', icon: '⚙' }
+];
+
 export default function AdminLayout({ children, title }) {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
+  const activeTab = String(router.query.tab || 'overview');
 
   useEffect(() => {
-    // Check if user is admin via API or local storage flag
-    // For simplicity, we assume /api/admin/check returns { isAdmin: true/false }
-    fetch('/api/admin/check')
-      .then(res => res.json())
-      .then(data => {
-        if (!data.isAdmin) {
-          alert('Access Denied');
-          router.push('/dashboard');
-        } else {
-          setIsAdmin(true);
-        }
+    let mounted = true;
+    fetch('/api/admin?section=check', { credentials: 'same-origin', cache: 'no-store' })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.isAdmin) throw new Error('Administrator access required.');
+        if (mounted) setIsAdmin(true);
       })
-      .catch(() => router.push('/'))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (mounted) router.replace('/?next=%2Fadmin');
+      })
+      .finally(() => mounted && setLoading(false));
+    return () => { mounted = false; };
   }, [router]);
 
-  if (loading) return <div className="admin-body" style={{ padding: '20px' }}>Verifying access...</div>;
+  async function signOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try { await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }); }
+    finally { router.replace('/'); }
+  }
+
+  if (loading) return <div className="admin-loading-screen"><span className="admin-loader" />Checking administrator access…</div>;
   if (!isAdmin) return null;
 
-  const links = [
-    { href: '/admin', label: 'Overview', icon: '📊' },
-    { href: '/admin/users', label: 'Users', icon: '👥' },
-    { href: '/admin/deposits', label: 'Deposits', icon: '💰' },
-    { href: '/admin/withdrawals', label: 'Withdrawals', icon: '🏦' },
-    { href: '/admin/packages', label: 'Packages', icon: '📦' },
-    { href: '/admin/settings', label: 'Settings', icon: '⚙️' },
-  ];
-
-  return (
-    <div className="admin-body">
-      {/* TOP BAR */}
-      <header className="top-bar" style={{ background: '#1e293b' }}>
-        <Link href="/admin" className="brand" style={{ color: '#fff' }}>LEBARA <span style={{ color: '#ef4444' }}>Admin</span></Link>
-        <button className="icon-btn" onClick={() => router.push('/dashboard')}>Exit</button>
-      </header>
-
-      {/* TAB NAVIGATION */}
-      <nav className="admin-nav-tabs">
-        {links.map(link => (
-          <Link key={link.href} href={link.href} className={`admin-tab ${router.pathname === link.href ? 'active' : ''}`}>
-            {link.icon} {link.label}
-          </Link>
-        ))}
-      </nav>
-
-      {/* MAIN CONTENT */}
-      <main className="content-area" style={{ paddingBottom: '40px' }}>
-        {title && <h2 className="page-title" style={{ color: '#fff' }}>{title}</h2>}
-        {children}
-      </main>
-    </div>
-  );
+  return <div className="admin-shell">
+    <header className="admin-topbar">
+      <Link href="/admin" className="admin-brand">LEBARA <span>Admin</span></Link>
+      <span className="admin-role-badge">ADMIN</span>
+      <button type="button" className="admin-signout" onClick={signOut} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
+    </header>
+    <nav className="admin-tabs" aria-label="Administrator sections">
+      {links.map((link) => <Link key={link.id} href={`/admin?tab=${link.id}`} scroll={false} className={`admin-tab ${activeTab === link.id ? 'active' : ''}`}><span aria-hidden="true">{link.icon}</span>{link.label}</Link>)}
+    </nav>
+    <main className="admin-main">
+      {title && <div className="admin-page-heading"><div><span className="admin-eyebrow">LEBARA CONTROL PANEL</span><h1>{title}</h1></div><span className="admin-secure-mark">Session protected</span></div>}
+      {children}
+    </main>
+  </div>;
 }
