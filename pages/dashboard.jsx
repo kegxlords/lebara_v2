@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import Link from 'next/link';
 
-const whatsappGroupUrl = process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL || 'https://chat.whatsapp.com/';
 const fallbackBanners = [
   { image_url: '', href: '/packages', alt: 'Explore Lebara plans' },
   { image_url: '', href: '/recharge', alt: 'Add funds securely' },
@@ -29,6 +28,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showWelcome, setShowWelcome] = useState(false);
+  const [whatsappGroupUrl, setWhatsappGroupUrl] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -41,6 +41,7 @@ export default function Dashboard() {
           setAccount(auth);
           setBanners(Array.isArray(content.banners) && content.banners.length ? content.banners : fallbackBanners);
           setNotifications(Array.isArray(content.notifications) ? content.notifications : []);
+          setWhatsappGroupUrl(content.whatsapp_group_url || '');
           setShowWelcome(true);
         }
       })
@@ -79,6 +80,6 @@ export default function Dashboard() {
     <section className="reference-wallet-strip"><div><small>Available balance</small><strong>{money(wallet.balance)}</strong></div><div><small>Income balance</small><strong>{money(wallet.income_balance)}</strong></div><Link href="/history">History ›</Link></section>
 
     <Link href="/gift-code" className="floating-gift-button" aria-label="Redeem gift code"><span>✉</span><i>✦</i></Link>
-    {showWelcome && <div className="premium-modal-backdrop" role="dialog" aria-modal="true"><div className="premium-modal"><button className="modal-close" onClick={() => setShowWelcome(false)} aria-label="Close">×</button><div className="modal-sparkle">✦</div><span className="eyebrow">LEBARA MEMBER UPDATE</span><h2>Welcome back{user.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}</h2><p>{notifications[0] ? `${notifications[0].text} ${notifications[0].amount || ''}. Keep your account active to unlock more rewards.` : 'Claim your daily reward and explore the latest Lebara opportunities.'}</p><Link href="/sign" className="modal-primary" onClick={() => setShowWelcome(false)}>View daily rewards →</Link><a href={whatsappGroupUrl} target="_blank" rel="noreferrer" className="modal-whatsapp" onClick={() => setShowWelcome(false)}><span>◉</span> Join the WhatsApp group ↗</a><button className="modal-secondary" onClick={() => setShowWelcome(false)}>Maybe later</button></div></div>}
+    {showWelcome && <div className="premium-modal-backdrop" role="dialog" aria-modal="true"><div className="premium-modal"><button className="modal-close" onClick={() => setShowWelcome(false)} aria-label="Close">×</button><div className="modal-sparkle">✦</div><span className="eyebrow">LEBARA MEMBER UPDATE</span><h2>Welcome back{user.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}</h2><p>{notifications[0] ? `${notifications[0].text} ${notifications[0].amount || ''}. Keep your account active to unlock more rewards.` : 'Claim your daily reward and explore the latest Lebara opportunities.'}</p><Link href="/sign" className="modal-primary" onClick={() => setShowWelcome(false)}>View daily rewards →</Link><a href={whatsappGroupUrl || '/support'} target="_blank" rel="noreferrer" className="modal-whatsapp" onClick={() => setShowWelcome(false)}><span>◉</span> Join the WhatsApp group ↗</a><button className="modal-secondary" onClick={() => setShowWelcome(false)}>Maybe later</button></div></div>}
   </AppLayout>;
 }

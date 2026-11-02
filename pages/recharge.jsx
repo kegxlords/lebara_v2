@@ -9,29 +9,38 @@ export default function RechargePage() {
   const [amount, setAmount] = useState('');
   const [balance, setBalance] = useState(0);
   const [name, setName] = useState('Member');
+  const [settings, setSettings] = useState({ min: 1000, max: 0 });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let mounted = true;
-    fetch('/api/auth').then((res) => res.ok ? res.json() : null).then((data) => {
-      if (!mounted || !data) return;
-      setBalance(Number(data.wallet?.balance) || 0);
-      setName(data.user?.full_name || 'Member');
-    }).catch(() => {}).finally(() => mounted && setLoading(false));
+    Promise.all([fetch('/api/auth'), fetch('/api/public-settings', { cache: 'no-store' })])
+      .then(async ([authRes, settingsRes]) => {
+        if (authRes.ok) {
+          const data = await authRes.json();
+          if (mounted) { setBalance(Number(data.wallet?.balance) || 0); setName(data.user?.full_name || 'Member'); }
+        }
+        if (settingsRes.ok) {
+          const data = await settingsRes.json();
+          if (mounted) { const min = Number(data.dep_min_amount); const max = Number(data.dep_max_amount); setSettings({ min: Number.isFinite(min) ? min : 1000, max: Number.isFinite(max) ? max : 0 }); }
+        }
+      })
+      .catch(() => {})
+      .finally(() => mounted && setLoading(false));
     return () => { mounted = false; };
   }, []);
 
   const numericAmount = Number(amount) || 0;
-  const serviceFee = 0;
-  const total = numericAmount + serviceFee;
-  const valid = numericAmount >= 1000;
+  const total = numericAmount;
+  const validDecimals = Math.abs(numericAmount * 100 - Math.round(numericAmount * 100)) < 0.000001;
+  const valid = numericAmount > 0 && numericAmount >= settings.min && (!settings.max || numericAmount <= settings.max) && validDecimals;
   const formattedAmount = useMemo(() => numericAmount ? money(numericAmount) : '₦0.00', [numericAmount]);
 
   async function handleSubmit(event) {
     event.preventDefault();
-    if (!valid) { setError('Minimum wallet funding amount is ₦1,000.'); return; }
+    if (!valid) { setError(`Enter an amount between ${money(settings.min)} and ${settings.max ? money(settings.max) : 'no maximum'}, using up to two decimal places.`); return; }
     setSubmitting(true); setError('');
     try {
       const res = await fetch('/api/deposit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: numericAmount }) });
@@ -43,20 +52,19 @@ export default function RechargePage() {
   }
 
   return <AppLayout title="Add funds">
-    <section className="moneyflow-hero deposit-hero"><div className="moneyflow-icon">＋</div><div><span className="eyebrow">SECURE WALLET FUNDING</span><h1>Power your account</h1><p>Top up your Lebara wallet in a few simple steps.</p></div><span className="secure-badge">🔒 Secure</span></section>
-
+    <section className="moneyflow-hero deposit-hero"><div className="moneyflow-icon">＋</div><div><span className="eyebrow">SECURE WALLET FUNDING</span><h1>Power your account</h1><p>Top up your Lebara wallet in a few simple steps.</p></div><span className="secure-badge">Secure</span></section>
     <section className="wallet-snapshot"><div><span>Current wallet balance</span><strong>{loading ? 'Loading…' : money(balance)}</strong></div><Link href="/history">View activity <span>›</span></Link></section>
-
     <form className="moneyflow-card" onSubmit={handleSubmit}>
       <div className="moneyflow-card-heading"><div><span className="eyebrow">STEP 1 OF 1</span><h2>Choose an amount</h2></div><span className="step-complete">Fast checkout</span></div>
       {error && <div className="moneyflow-alert error">{error}</div>}
       <label className="money-label" htmlFor="deposit-amount">How much would you like to add?</label>
-      <div className={`money-input-wrap ${amount ? 'filled' : ''}`}><span>₦</span><input id="deposit-amount" type="number" inputMode="decimal" min="1000" step="50" placeholder="0.00" value={amount} onChange={(event) => { setAmount(event.target.value); setError(''); }} required /><small>NGN</small></div>
-      <div className="amount-presets">{presets.map((preset) => <button type="button" key={preset} className={numericAmount === preset ? 'selected' : ''} onClick={() => { setAmount(String(preset)); setError(''); }}>₦{preset.toLocaleString()}</button>)}</div>
+      <div className={`money-input-wrap ${amount ? 'filled' : ''}`}><span>₦</span><input id="deposit-amount" type="number" inputMode="decimal" min={settings.min} max={settings.max || undefined} step="0.01" placeholder="0.00" value={amount} onChange={(event) => { setAmount(event.target.value); setError(''); }} required /><small>NGN</small></div>
+      <small className="moneyflow-footnote">Minimum {money(settings.min)}{settings.max ? ` · Maximum ${money(settings.max)}` : ''}</small>
+      <div className="amount-presets">{presets.filter((preset) => preset >= settings.min && (!settings.max || preset <= settings.max)).map((preset) => <button type="button" key={preset} className={numericAmount === preset ? 'selected' : ''} onClick={() => { setAmount(String(preset)); setError(''); }}>₦{preset.toLocaleString()}</button>)}</div>
       <div className="payment-method-card"><span className="method-logo">◈</span><div><b>Secure online payment</b><small>Card, bank transfer and other local methods</small></div><span className="method-check">✓</span></div>
       <div className="cost-summary"><div><span>Amount to wallet</span><b>{formattedAmount}</b></div><div><span>Processing fee</span><b className="green-text">Free</b></div><div className="summary-total"><span>Total payment</span><strong>{money(total)}</strong></div></div>
       <button className="moneyflow-primary" disabled={submitting || !valid}>{submitting ? 'Opening secure checkout…' : 'Continue to payment  →'}</button>
-      <p className="moneyflow-footnote">You will be redirected to our encrypted payment partner. Never share your card PIN or OTP.</p>
+      <p className="moneyflow-footnote">{name ? `Payment will be credited to ${name}. ` : ''}Never share your card PIN or OTP.</p>
     </form>
     <div className="moneyflow-help"><span>Need help?</span><Link href="/support">Contact customer service ›</Link></div>
   </AppLayout>;

@@ -25,7 +25,9 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Login failed');
 
-      router.replace('/dashboard');
+      const requested = typeof router.query.next === 'string' ? router.query.next : '';
+      const safeNext = requested.startsWith('/') && !requested.startsWith('//') ? requested : '';
+      router.replace(data.user?.is_admin ? (safeNext || '/admin') : (safeNext || '/dashboard'));
       
     } catch (err) {
       setError(err.message);
