@@ -28,7 +28,7 @@ export default function WithdrawPage() {
   const [amount, setAmount] = useState('');
   const [pin, setPin] = useState('');
   const [balance, setBalance] = useState(0);
-  const [settings, setSettings] = useState({ min: 1000, max: 1000000, dailyLimit: 3, feePct: 0, feeFixed: 0, manual: false });
+  const [settings, setSettings] = useState({ min: 1000, max: 1000000, dailyLimit: 3, manual: false });
   const [windowStatus, setWindowStatus] = useState({ isOpen: true, label: 'Schedule loading' });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -52,8 +52,6 @@ export default function WithdrawPage() {
             min: Number.isFinite(parsedMin) ? parsedMin : 1000,
             max: Number.isFinite(parsedMax) ? parsedMax : 1000000,
             dailyLimit: Math.max(1, Math.min(100, Number(data.wd_daily_limit) || 3)),
-            feePct: Number(data.withdrawal_fee_pct) || 0,
-            feeFixed: Number(data.withdrawal_fee_fixed) || 0,
             manual: data.withdrawal_mode === 'manual'
           };
           if (mounted) { setSettings(next); setWindowStatus(getWindowStatus(data)); }
@@ -65,8 +63,6 @@ export default function WithdrawPage() {
   }, []);
 
   const numericAmount = Number(amount) || 0;
-  const fee = Math.round((numericAmount * settings.feePct / 100 + settings.feeFixed + Number.EPSILON) * 100) / 100;
-  const receive = Math.max(0, numericAmount - fee);
   const selectedBank = banks.find((bank) => String(bank.id) === String(selectedBankId));
   const validDecimals = Math.abs(numericAmount * 100 - Math.round(numericAmount * 100)) < 0.000001;
   const valid = numericAmount > 0 && numericAmount >= settings.min && (settings.max <= 0 || numericAmount <= settings.max) && numericAmount <= balance && validDecimals && Boolean(selectedBankId) && pin.length >= 4 && windowStatus.isOpen;
@@ -104,7 +100,6 @@ export default function WithdrawPage() {
       <div className="money-label bank-label">Send to bank account <Link href="/bank-cards">Manage banks</Link></div>
       {banks.length === 0 ? <div className="empty-bank"><span>＋</span><div><b>No bank account saved</b><small>Add a verified bank account in your profile settings.</small></div><Link href="/bank-cards">Add bank ›</Link></div> : <div className="bank-list">{banks.map((bank) => <button type="button" key={bank.id} className={`bank-card ${String(selectedBankId) === String(bank.id) ? 'selected' : ''}`} onClick={() => setSelectedBankId(bank.id)}><span className="bank-emblem">₦</span><span><b>{bank.bank_name}</b><small>{bank.account_name} · •••• {bank.account_number.slice(-4)}</small></span><i>{String(selectedBankId) === String(bank.id) ? '✓' : ''}</i></button>)}</div>}
       <label className="money-label" htmlFor="withdraw-pin">Withdrawal PIN <Link href="/withdrawal-password">Forgot or change PIN?</Link></label><div className="pin-input-wrap"><span>⌁</span><input id="withdraw-pin" type="password" inputMode="numeric" maxLength="6" placeholder="Enter 4–6 digit PIN" value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, ''))} required /><small>••••</small></div>
-      <div className="cost-summary withdrawal-summary"><div><span>Withdrawal amount</span><b>{money(numericAmount)}</b></div><div><span>Service fee {settings.feePct ? `(${settings.feePct}%)` : ''}</span><b>{fee ? money(fee) : 'Free'}</b></div><div className="summary-total"><span>You receive</span><strong>{money(receive)}</strong></div></div>
       <button className="moneyflow-primary withdrawal-button" disabled={submitting || !valid}>{submitting ? 'Submitting secure request…' : settings.manual ? 'Request admin approval  →' : 'Request withdrawal  →'}</button><p className="moneyflow-footnote">Your PIN is encrypted and never shared with the payment provider.</p>
     </form>
   </AppLayout>;
