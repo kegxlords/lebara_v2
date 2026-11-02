@@ -11,6 +11,15 @@ function parseAmount(value) {
   return Math.round(amount * 100) / 100;
 }
 
+function nigeriaDayStart() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  // Nigeria uses UTC+1 year-round.
+  return new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)) - 60 * 60 * 1000).toISOString();
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const user = await requireAuth(req, res);
@@ -55,6 +64,18 @@ export default async function handler(req, res) {
       .select('income_balance').eq('user_id', user.id).maybeSingle();
     if (walletError) throw walletError;
     if (!wallet || Number(wallet.income_balance) < grossAmount) return res.status(400).json({ error: 'Insufficient withdrawable balance.' });
+
+    const dailyLimit = Math.max(1, Math.min(100, Number(settings.wd_daily_limit) || 3));
+    const { count: withdrawalsToday, error: countError } = await supabaseAdmin
+      .from('withdrawals')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', nigeriaDayStart())
+      .in('status', ['pending', 'processing', 'paid']);
+    if (countError) throw countError;
+    if ((withdrawalsToday || 0) >= dailyLimit) {
+      return res.status(429).json({ error: `Daily withdrawal limit reached. You can make up to ${dailyLimit} withdrawal${dailyLimit === 1 ? '' : 's'} per day.` });
+    }
 
     const merchantSn = process.env.AFRSTAR_MERCHANT_SN;
     const accessKey = process.env.AFRSTAR_ACCESS_KEY;
