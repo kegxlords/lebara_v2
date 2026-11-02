@@ -88,7 +88,7 @@ export default function Dashboard() {
 
     <section className="reference-wallet-strip"><div><small>Available balance</small><strong>{money(wallet.balance)}</strong></div><div><small>Income balance</small><strong>{money(wallet.income_balance)}</strong></div><Link href="/history">History ›</Link></section>
 
-    <Link href="/gift-code" className="floating-gift-button" aria-label="Redeem gift code"><span>✉</span><i>✦</i></Link>
+    <Link href="/gift-code" className="floating-gift-button" aria-label="Redeem gift code"><AppIcon name="gift" size={26} /><i>✦</i></Link>
     {showWelcome && <div className="premium-modal-backdrop" role="dialog" aria-modal="true"><div className="premium-modal"><button className="modal-close" onClick={() => setShowWelcome(false)} aria-label="Close">×</button><div className="modal-sparkle"><AppIcon name="sparkle" size={25} /></div><span className="eyebrow">LEBARA MEMBER UPDATE</span><h2>Welcome back{user.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}</h2><p>{notifications[0] ? `${notifications[0].text} ${notifications[0].amount || ''}. Keep your account active to unlock more rewards.` : 'Claim your daily reward and explore the latest Lebara opportunities.'}</p><Link href="/sign" className="modal-primary" onClick={() => setShowWelcome(false)}>View daily rewards →</Link><a href={whatsappGroupUrl || '/support'} target="_blank" rel="noreferrer" className="modal-whatsapp" onClick={() => setShowWelcome(false)}><WhatsAppIcon size={18} /> Join the WhatsApp group ↗</a><button className="modal-secondary" onClick={() => setShowWelcome(false)}>Maybe later</button></div></div>}
   </AppLayout>;
 }
