@@ -2704,4 +2704,15 @@ input::placeholder, textarea::placeholder { color: rgba(255, 255, 255, 0.5); }
 .package-reference-body dt, .package-reference-body dd { margin: 0; }
 .package-reference-body dd { color: #fff; font-weight: 850; text-align: right; }
 .package-reference-body dl div:nth-child(3) dd, .package-reference-body dl div:nth-child(4) dd { color: #F5B301; text-shadow: 0 0 8px rgba(245, 179, 1, 0.5); }
-.package-reference-buy { display: flex; min-height: 48px; align-items: center; justify-content: center; border-radius: 999px; font-size: 16px; font-weight: 850; text-dec
+.package-reference-buy { display: flex; min-height: 48px; align-items: center; justify-content: center; border-radius: 999px; font-size: 16px; font-weight: 850; text-decoration: none; color: #fff; background: var(--lb-grad-pink); box-shadow: 0 8px 18px rgba(18, 58, 143, 0.2); }
+.package-reference-buy.fund { background: var(--lb-grad-gold); color: #10203F; }
+.package-reference-buy.disabled { width: 100%; border: 0; color: rgba(255, 255, 255, 0.72); background: rgba(90, 107, 133, 0.35); box-shadow: none; }
+.package-reference-requirement { position: absolute; top: 12px; left: 10px; right: 10px; z-index: 2; display: block; width: max-content; max-width: calc(100% - 20px); padding: 6px 9px; overflow: hidden; border-radius: 999px; color: #F5B301 !important; background: rgba(24, 27, 35, 0.88); font-size: 10px !important; font-weight: 900 !important; letter-spacing: 0.1px !important; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 380px) {
+  .package-reference-page { margin-left: 14px; margin-right: 14px; }
+  .package-reference-grid { gap: 14px; }
+  .package-reference-body { padding-left: 10px; padding-right: 10px; }
+  .package-reference-body h2 { font-size: 14px; }
+  .package-reference-body dl { font-size: 12px; }
+  .package-reference-buy { min-height: 43px; font-size: 14px; }
+}
