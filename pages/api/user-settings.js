@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { NIGERIAN_BANKS } from '../../lib/banks';
 
 export default async function handler(req, res) {
-    const user = requireAuth(req, res);
+    const user = await requireAuth(req, res);
     if (!user) return; // Stops execution if not logged in
 
     const method = req.method;

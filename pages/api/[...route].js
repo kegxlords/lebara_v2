@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import { getSiteSettings, publicSiteSettings } from '../../lib/site-settings';
 
 const DEFAULT_BANNERS = [
   { image_url: '', href: '/packages', alt: 'Explore Lebara plans' },
@@ -25,7 +26,7 @@ function maskPerson(user) {
 
 async function depositStatus(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
-  const user = requireAuth(req, res);
+  const user = await requireAuth(req, res);
   if (!user) return;
   const ref = String(req.query.ref || '');
   if (!ref) return res.status(400).json({ error: 'Reference is required' });
@@ -45,38 +46,29 @@ async function depositStatus(req, res) {
 
 async function redeemGiftCode(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  const user = requireAuth(req, res);
+  const user = await requireAuth(req, res);
   if (!user) return;
   const code = String(req.body?.code || '').trim().toUpperCase();
   if (!code) return res.status(400).json({ error: 'Gift code is required' });
   try {
-    const { data: gift, error: giftError } = await supabaseAdmin
-      .from('gift_codes').select('*').eq('code', code).maybeSingle();
-    if (giftError) throw giftError;
-    if (!gift || gift.is_active === false) return res.status(404).json({ error: 'This gift code is invalid or inactive.' });
-    if (gift.expires_at && new Date(gift.expires_at) < new Date()) return res.status(400).json({ error: 'This gift code has expired.' });
-    if (gift.max_uses && Number(gift.used_count || 0) >= Number(gift.max_uses)) return res.status(400).json({ error: 'This gift code has already reached its usage limit.' });
-    const { data: used } = await supabaseAdmin
-      .from('gift_code_redemptions').select('id').eq('gift_code_id', gift.id).eq('user_id', user.id).maybeSingle();
-    if (used) return res.status(409).json({ error: 'You have already redeemed this gift code.' });
-    const amount = Number(gift.amount || gift.value || 0);
-    if (amount <= 0) return res.status(400).json({ error: 'This gift code has no reward attached.' });
-    const credit = await supabaseAdmin.rpc('credit_wallet', { p_user_id: user.id, p_amount: amount, p_type: 'gift_code' });
-    if (credit.error) throw credit.error;
-    const { error: redemptionError } = await supabaseAdmin
-      .from('gift_code_redemptions').insert({ gift_code_id: gift.id, user_id: user.id, amount });
-    if (redemptionError) throw redemptionError;
-    await supabaseAdmin.from('gift_codes').update({ used_count: Number(gift.used_count || 0) + 1 }).eq('id', gift.id);
-    return res.status(200).json({ success: true, amount, message: `Gift redeemed. ${`₦${amount.toLocaleString()}`} has been added to your wallet.` });
+    const { data, error } = await supabaseAdmin.rpc('redeem_gift_code', { p_user_id: user.id, p_code: code });
+    if (error) throw error;
+    if (!data?.success) {
+      const message = data?.error || 'Gift redemption could not be completed.';
+      const status = message.toLowerCase().includes('already redeemed') ? 409 : message.toLowerCase().includes('invalid') ? 404 : 400;
+      return res.status(status).json({ error: message });
+    }
+    const amount = Number(data.amount) || 0;
+    return res.status(200).json({ success: true, amount, message: `Gift redeemed. ₦${amount.toLocaleString()} has been added to your wallet.` });
   } catch (error) {
-    console.error('Gift code error:', error);
+    console.error('Gift code error:', error.message || error);
     return res.status(500).json({ error: 'Gift redemption is temporarily unavailable.' });
   }
 }
 
 async function listOrders(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
-  const user = requireAuth(req, res);
+  const user = await requireAuth(req, res);
   if (!user) return;
   try {
     const { data, error } = await supabaseAdmin
@@ -142,7 +134,7 @@ async function passwordReset(req, res) {
 
 async function publicSettings(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
-  const user = requireAuth(req, res);
+  const user = await requireAuth(req, res);
   if (!user) return;
   try {
     const [{ data: settings }, { data: transactions }] = await Promise.all([
@@ -165,9 +157,11 @@ async function publicSettings(req, res) {
       return { text: `user ${person} ${label}`, amount, created_at: item.created_at };
     });
     const configuredNotifications = parseSetting(settingMap.dashboard_notifications, []);
+    const siteSettings = publicSiteSettings(await getSiteSettings());
     return res.status(200).json({
       banners: parseSetting(settingMap.dashboard_banners, DEFAULT_BANNERS),
-      notifications: configuredNotifications.length ? configuredNotifications : notifications
+      notifications: configuredNotifications.length ? configuredNotifications : notifications,
+      ...siteSettings
     });
   } catch (error) {
     console.error('Dashboard content error:', error);
@@ -177,7 +171,7 @@ async function publicSettings(req, res) {
 
 async function team(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
-  const user = requireAuth(req, res);
+  const user = await requireAuth(req, res);
   if (!user) return;
   try {
     const { data: profile } = await supabaseAdmin.from('users').select('phone, referral_code').eq('id', user.id).single();

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
+import { canPurchasePackage } from '../../lib/package-access';
 
 export default async function handler(req, res) {
     const method = req.method;
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
 
     // POST: Buy Package
     if (method === 'POST') {
-        const user = requireAuth(req, res);
+        const user = await requireAuth(req, res);
         if (!user) return;
 
         const { packageId } = req.body;
@@ -27,8 +28,9 @@ export default async function handler(req, res) {
 
         try {
             // 1. Get Package
-            const { data: pkg } = await supabaseAdmin.from('packages').select('*').eq('id', packageId).single();
+            const { data: pkg } = await supabaseAdmin.from('packages').select('*').eq('id', packageId).eq('is_active', true).maybeSingle();
             if (!pkg || pkg.is_locked) return res.status(404).json({ error: 'Package unavailable' });
+            if (!(await canPurchasePackage(user.id, pkg))) return res.status(403).json({ error: `This VIP plan requires ${Number(pkg.vip_required_invites)} activated referrals.` });
 
             // 2. Check Balance
             const { data: wallet } = await supabaseAdmin.from('wallets').select('balance').eq('user_id', user.id).single();
