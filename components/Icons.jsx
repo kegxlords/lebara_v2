@@ -8,6 +8,7 @@ export function AppIcon({ name, size = 24, strokeWidth = 1.9, className = '' }) 
     profile: <><circle cx="12" cy="8" r="3.5" /><path d="M5 21c.5-4 2.8-6 7-6s6.5 2 7 6" /></>,
     sparkle: <path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2Z" />,
     recharge: <><rect x="3" y="7" width="16" height="10" rx="2" /><path d="M19 10h2v4h-2M7 12h8" /></>,
+    wallet: <><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H19v14H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" /><path d="M4 8h15" /><path d="M15 12h4v3h-4a1.5 1.5 0 1 1 0-3Z" /></>,
     withdraw: <><path d="M5 19 19 5" /><path d="M9 5h10v10" /><path d="M5 19h10V9" /></>,
     download: <><path d="M12 3v12" /><path d="m7 10 5 5 5-5M5 21h14" /></>,
     whatsapp: <><path d="M20.5 11.5a8.5 8.5 0 0 1-12.7 7.4L3.5 20l1.2-4.1A8.5 8.5 0 1 1 20.5 11.5Z" /><path d="M8.2 8.1c.3-.5.7-.5 1-.4l1.1 2.2c.1.3.1.5-.1.7l-.6.6c.7 1.2 1.6 2.1 2.8 2.8l.6-.6c.2-.2.5-.2.7-.1l2.2 1.1c.3.2.3.6-.1 1-.5.6-1.2.9-1.9.8-3.5-.6-6.5-3.6-7.1-7.1-.1-.7.2-1.4.8-2Z" /></>,
