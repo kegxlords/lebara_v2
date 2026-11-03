@@ -88,6 +88,7 @@ async function listOrders(req, res) {
       .eq('user_id', user.id)
       .order('purchased_at', { ascending: false });
     if (error) throw error;
+    const nowMs = Date.now();
     const orders = (data || []).map((op) => {
       const purchaseDate = new Date(op.purchased_at);
       const nextDropMs = purchaseDate.getTime() + ((op.days_collected + 1) * 24 * 60 * 60 * 1000);
