@@ -89,7 +89,26 @@ async function listOrders(req, res) {
       .order('purchased_at', { ascending: false });
     if (error) throw error;
     const nowMs = Date.now();
-    const orders = (data || []).map((op) => {
+    const duePackages = (data || []).filter((op) => {
+      if (op.status !== 'active' || Number(op.days_collected) >= Number(op.days)) return false;
+      const nextDropMs = new Date(op.purchased_at).getTime() + ((Number(op.days_collected || 0) + 1) * 86400000);
+      return Number.isFinite(nextDropMs) && nowMs >= nextDropMs;
+    });
+    for (const op of duePackages) {
+      const { error: incomeError } = await supabaseAdmin.rpc('process_daily_income', {
+        p_user_id: op.user_id,
+        p_pkg_id: op.id,
+        p_amount: Number(op.packages?.daily_income) || Number(op.daily_income) || 0,
+        p_new_day_count: Number(op.days_collected || 0) + 1,
+        p_total_days: Number(op.days) || Number(op.packages?.days) || 0
+      });
+      if (incomeError) console.error('Order-page income reconciliation failed:', incomeError.message || incomeError);
+    }
+    const refreshed = duePackages.length
+      ? await supabaseAdmin.from('user_packages').select('*, packages(name, image_url, daily_income, days)').eq('user_id', user.id).order('purchased_at', { ascending: false })
+      : { data, error: null };
+    if (refreshed.error) throw refreshed.error;
+    const orders = (refreshed.data || []).map((op) => {
       const purchaseDate = new Date(op.purchased_at);
       const nextDropMs = purchaseDate.getTime() + ((op.days_collected + 1) * 24 * 60 * 60 * 1000);
       const diffSecs = Math.floor((nextDropMs - nowMs) / 1000);
