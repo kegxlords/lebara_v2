@@ -38,9 +38,9 @@ export default async function handler(req, res) {
             if (nowTs < nextDueEpoch) continue; // Not due yet
 
             // ATOMIC UPDATE via RPC
-            const { error: updateErr } = await supabaseAdmin.rpc('process_daily_income', {
+            const { error: updateErr } = await supabaseAdmin.rpc('process_daily_income_for_package', {
                 p_user_id: pkg.user_id,
-                p_pkg_id: pkg.id,
+                p_pkg_id: String(pkg.id),
                 p_amount: parseFloat(pkg.packages.daily_income),
                 p_new_day_count: pkg.days_collected + 1,
                 p_total_days: pkg.days
