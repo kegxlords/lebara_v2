@@ -114,10 +114,10 @@ async function listOrders(req, res) {
       const diffSecs = Math.floor((nextDropMs - nowMs) / 1000);
       return {
         ...op,
-        name: op.packages?.name,
-        image_url: op.packages?.image_url,
-        daily_income: op.packages?.daily_income,
-        days: op.packages?.days,
+        name: op.packages?.name || op.package_name || op.name,
+        image_url: op.packages?.image_url || op.image_url,
+        daily_income: op.daily_income ?? op.packages?.daily_income,
+        days: op.days ?? op.packages?.days,
         next_drop_seconds: diffSecs > 0 ? diffSecs : 0,
         is_complete: op.status === 'completed'
       };
