@@ -62,7 +62,18 @@ async function redeemGiftCode(req, res) {
     return res.status(200).json({ success: true, amount, message: `Gift redeemed. ₦${amount.toLocaleString()} has been added to your wallet.` });
   } catch (error) {
     console.error('Gift code error:', error.message || error);
-    return res.status(500).json({ error: 'Gift redemption is temporarily unavailable.' });
+    const code = error?.code || '';
+    const message = String(error?.message || '');
+    if (code === '42883' || /function .*redeem_gift_code.* does not exist/i.test(message)) {
+      return res.status(503).json({ error: 'Gift redemption is not configured. Run the gift-code SQL migration in Supabase.' });
+    }
+    if (code === '42P01' || /relation .* does not exist/i.test(message)) {
+      return res.status(503).json({ error: 'Gift redemption storage is missing. Run the gift-code SQL migration in Supabase.' });
+    }
+    if (code === '42703' || /column .* does not exist/i.test(message)) {
+      return res.status(503).json({ error: 'Gift redemption storage is missing a required column. Re-run the gift-code SQL migration.' });
+    }
+    return res.status(500).json({ error: 'Gift redemption failed. Check the gift-code database migration and Supabase logs.' });
   }
 }
 
