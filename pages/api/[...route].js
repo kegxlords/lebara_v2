@@ -95,9 +95,9 @@ async function listOrders(req, res) {
       return Number.isFinite(nextDropMs) && nowMs >= nextDropMs;
     });
     for (const op of duePackages) {
-      const { error: incomeError } = await supabaseAdmin.rpc('process_daily_income', {
+      const { error: incomeError } = await supabaseAdmin.rpc('process_daily_income_for_package', {
         p_user_id: op.user_id,
-        p_pkg_id: op.id,
+        p_pkg_id: String(op.id),
         p_amount: Number(op.packages?.daily_income) || Number(op.daily_income) || 0,
         p_new_day_count: Number(op.days_collected || 0) + 1,
         p_total_days: Number(op.days) || Number(op.packages?.days) || 0
