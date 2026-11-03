@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 
@@ -8,6 +8,16 @@ export default function RegisterPage() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const queryValue = router.query.ref || router.query.referral_code || router.query.referralCode;
+    const value = Array.isArray(queryValue) ? queryValue[0] : queryValue;
+    const referralCode = String(value || '').trim().toUpperCase();
+    if (referralCode && /^[A-Z0-9_-]{1,32}$/.test(referralCode)) {
+      setFormData((current) => current.refCode ? current : { ...current, refCode: referralCode });
+    }
+  }, [router.isReady, router.query.ref, router.query.referral_code, router.query.referralCode]);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -87,9 +97,10 @@ export default function RegisterPage() {
           <div className="input-group-wrapper">
             <label>Referral Code (Optional)</label>
             <div className="input-box-row">
-               <svg className="icon-left" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-              <input name="refCode" value={formData.refCode} onChange={handleChange} placeholder="Leave blank if none" />
+               <svg className="icon-left" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.66 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+              <input name="refCode" value={formData.refCode} onChange={(e) => setFormData({ ...formData, refCode: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 32) })} placeholder="Leave blank if none" maxLength="32" />
             </div>
+            {formData.refCode && <small className="referral-captured-message">Referral code captured from your invite link.</small>}
           </div>
 
           <button type="submit" className="btn-signin-full" disabled={loading}>
