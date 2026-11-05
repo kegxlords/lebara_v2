@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unable to start password reset');
-      setMessage('If an account matches that phone number or email, reset instructions will be sent.');
+      setMessage(data.message || 'If the account exists, Supabase will send reset instructions to its registered email.');
       setIdentifier('');
     } catch (err) {
       setError(err.message);
@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
     <div className="auth-layout-container">
       <div className="auth-floating-card">
         <h1>Reset Password</h1>
-        <p className="sub">Enter your phone number or email to continue.</p>
+        <p className="sub">Enter your account email, or your phone number if an email is saved to your account. Supabase sends the recovery link to that registered email.</p>
         {message && <div className="alert-success">{message}</div>}
         {error && <div className="alert-error">{error}</div>}
         <form onSubmit={handleSubmit}>

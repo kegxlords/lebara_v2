@@ -1,26 +1,74 @@
-import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { getSupabaseBrowserClient } from '../lib/supabase-browser';
 
 export default function ResetPasswordPage() {
-  const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [recoveryReady, setRecoveryReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let client;
+    try {
+      client = getSupabaseBrowserClient();
+      if (!client) throw new Error('Supabase Auth is unavailable in this browser.');
+    } catch (err) {
+      setError(err.message || 'Supabase Auth is not configured.');
+      setChecking(false);
+      return undefined;
+    }
+
+    const { data: listener } = client.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+      if (event === 'PASSWORD_RECOVERY' || session) setRecoveryReady(Boolean(session));
+    });
+
+    client.auth.getSession().then(({ data, error: sessionError }) => {
+      if (!active) return;
+      setRecoveryReady(Boolean(data?.session));
+      if (sessionError) setError('This recovery link is invalid or expired. Request a new one.');
+      setChecking(false);
+    }).catch(() => {
+      if (!active) return;
+      setError('This recovery link is invalid or expired. Request a new one.');
+      setChecking(false);
+    });
+
+    return () => {
+      active = false;
+      listener?.subscription?.unsubscribe();
+    };
+  }, []);
 
   async function submit(event) {
-    event.preventDefault(); setMessage(''); setError('');
-    if (password !== confirm) { setError('Passwords do not match'); return; }
+    event.preventDefault();
+    setMessage('');
+    setError('');
+    if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (password !== confirm) { setError('Passwords do not match.'); return; }
+    if (!recoveryReady) { setError('Open the latest password-reset link from your Supabase email, then try again.'); return; }
+
     setLoading(true);
     try {
-      const res = await fetch('/api/password-reset', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: router.query.token, newPassword: password }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Unable to reset password');
-      setMessage('Password updated successfully. You can now sign in.'); setPassword(''); setConfirm('');
-    } catch (err) { setError(err.message); } finally { setLoading(false); }
+      const client = getSupabaseBrowserClient();
+      const { error: updateError } = await client.auth.updateUser({ password });
+      if (updateError) throw updateError;
+      setMessage('Password updated in Supabase. You can now sign in with your new password.');
+      setPassword('');
+      setConfirm('');
+      await client.auth.signOut().catch(() => {});
+      setRecoveryReady(false);
+    } catch (err) {
+      setError(err.message || 'Unable to update your Supabase password. Request a new recovery link and try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
-  return <div className="auth-layout-container"><div className="auth-floating-card"><h1>Create new password</h1><p className="sub">Choose a secure password for your Lebara account.</p>{message && <div className="alert-success">{message}</div>}{error && <div className="alert-error">{error}</div>}<form onSubmit={submit}><div className="input-group-wrapper"><label>New password</label><div className="input-box-row"><input type="password" minLength="6" value={password} onChange={(e) => setPassword(e.target.value)} required /></div></div><div className="input-group-wrapper"><label>Confirm password</label><div className="input-box-row"><input type="password" minLength="6" value={confirm} onChange={(e) => setConfirm(e.target.value)} required /></div></div><button className="btn-signin-full" disabled={loading || !router.query.token}>{loading ? 'Updating…' : 'Update password'}</button></form><div className="footer-links"><Link href="/">Return to sign in</Link></div></div></div>;
+  return <div className="auth-layout-container"><div className="auth-floating-card"><h1>Create new password</h1><p className="sub">Choose a password of at least 8 characters for your Lebara account.</p>{message && <div className="alert-success">{message}</div>}{error && <div className="alert-error">{error}</div>}{checking ? <p className="sub">Verifying your Supabase recovery link…</p> : <form onSubmit={submit}><div className="input-group-wrapper"><label>New password</label><div className="input-box-row"><input type="password" autoComplete="new-password" minLength="8" value={password} onChange={(e) => setPassword(e.target.value)} required /></div></div><div className="input-group-wrapper"><label>Confirm password</label><div className="input-box-row"><input type="password" autoComplete="new-password" minLength="8" value={confirm} onChange={(e) => setConfirm(e.target.value)} required /></div></div><button className="btn-signin-full" disabled={loading || !recoveryReady}>{loading ? 'Updating…' : 'Update password'}</button></form>}<div className="footer-links"><Link href="/">Return to sign in</Link></div></div></div>;
 }

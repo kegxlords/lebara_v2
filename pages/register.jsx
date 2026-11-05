@@ -23,6 +23,10 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!/^\d{10}$/.test(formData.phone)) {
+      setError('Enter exactly 10 digits for your phone number.');
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -71,12 +75,12 @@ export default function RegisterPage() {
             <label>Phone Number</label>
             <div className="input-box-row">
               <span className="prefix-flag">🇳🇬 +234</span>
-              <input name="phone" type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g,'')})} placeholder="Enter phone number" required maxLength="10" />
+              <input name="phone" type="tel" inputMode="numeric" autoComplete="tel-national" pattern="[0-9]{10}" minLength={10} maxLength={10} value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10 digits" required />
             </div>
           </div>
 
           <div className="input-group-wrapper">
-            <label>Email (Optional)</label>
+            <label>Email (Optional — needed for password recovery)</label>
             <div className="input-box-row">
                <svg className="icon-left" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
               <input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="example@mail.com" />
@@ -87,7 +91,7 @@ export default function RegisterPage() {
             <label>Password</label>
             <div className="input-box-row">
                <svg className="icon-left" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-              <input name="password" type={showPass ? "text" : "password"} value={formData.password} onChange={handleChange} placeholder="Min 6 characters" required minLength="6" />
+              <input name="password" type={showPass ? "text" : "password"} value={formData.password} onChange={handleChange} placeholder="Min 8 characters" required minLength="8" />
               <button type="button" onClick={() => setShowPass(!showPass)} className="toggle-pass">
                 {showPass ? 'Hide' : 'Show'}
               </button>
