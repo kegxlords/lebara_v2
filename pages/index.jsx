@@ -12,6 +12,16 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const digits = phone.replace(/\D/g, '');
+    const normalizedPhone = digits.length === 13 && digits.startsWith('234')
+      ? digits.slice(3)
+      : digits.length === 11 && digits.startsWith('0')
+        ? digits.slice(1)
+        : digits;
+    if (!/^\d{10}$/.test(normalizedPhone)) {
+      setError('Enter the full phone number: 10 digits after +234, or 11 digits starting with 0.');
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -56,12 +66,14 @@ export default function LoginPage() {
             <label>Phone Number</label>
             <div className="input-box-row">
               <span className="prefix-flag">🇳🇬 +234</span>
-              <input 
-                type="tel" 
-                value={phone} 
-                onChange={(e) => setPhone(e.target.value)} 
-                placeholder="Enter phone number" 
-                required 
+              <input
+                type="tel"
+                value={phone}
+                inputMode="numeric"
+                maxLength={18}
+                onChange={(e) => setPhone(e.target.value.replace(/[^\d+\s()-]/g, ''))}
+                placeholder="10 digits after +234"
+                required
                 autoComplete="tel"
               />
             </div>
