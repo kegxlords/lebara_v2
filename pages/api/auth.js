@@ -23,6 +23,44 @@ function authUserMatchesAccount(authUser, account, phone) {
     return normalizeLocalPhone(authUser.phone) === phone;
 }
 
+async function findAuthUserForAccount(account, phone) {
+    const { data: byId, error: byIdError } = await supabaseAdmin.auth.admin.getUserById(account.id);
+    if (!byIdError && byId?.user && authUserMatchesAccount(byId.user, account, phone)) return byId.user;
+
+    // Older app profiles may have been created separately from auth.users, so
+    // locate their Auth identity by the account's unique email/phone.
+    for (let page = 1; page <= 100; page += 1) {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+        if (error) throw error;
+        const matches = (data?.users || []).filter((candidate) => authUserMatchesAccount(candidate, account, phone));
+        if (matches.length > 1) throw new Error('Multiple Supabase Auth identities match this account.');
+        if (matches.length === 1) return matches[0];
+        if (!data?.nextPage || page >= data.lastPage) break;
+    }
+    return null;
+}
+
+async function signInToSupabase(authClient, authUser, account, phone, password) {
+    const identities = [];
+    const authPhone = authUser?.phone || `+234${phone}`;
+    if (authPhone) identities.push({ phone: authPhone });
+    const authEmail = authUser?.email || account.email;
+    if (authEmail) identities.push({ email: String(authEmail).trim().toLowerCase() });
+
+    for (const identity of identities) {
+        const { data, error } = await authClient.auth.signInWithPassword({ ...identity, password });
+        if (!error && data?.user && authUserMatchesAccount(data.user, account, phone)) return data.user;
+    }
+    return null;
+}
+
+async function invalidateLegacyPassword(accountId) {
+    const unusablePassword = crypto.randomBytes(48).toString('hex');
+    const unusableHash = await bcrypt.hash(unusablePassword, 12);
+    const { error } = await supabaseAdmin.from('users').update({ password_hash: unusableHash }).eq('id', accountId);
+    if (error) throw error;
+}
+
 export default async function handler(req, res) {
     const method = req.method;
 
@@ -106,20 +144,40 @@ export default async function handler(req, res) {
             if (error || !user) return res.status(401).json({ error: 'Invalid credentials' });
             if (user.is_banned) return res.status(403).json({ error: 'Account suspended' });
 
+            let authUser = null;
             try {
                 const authClient = createSupabaseAuthClient();
-                const credentials = [{ phone: `+234${localPhone}` }];
-                if (user.email) credentials.push({ email: String(user.email).trim().toLowerCase() });
-                let authUser = null;
-                for (const identity of credentials) {
-                    const { data, error: authError } = await authClient.auth.signInWithPassword({ ...identity, password });
-                    if (!authError && data?.user) { authUser = data.user; break; }
-                }
-                if (!authUser || !authUserMatchesAccount(authUser, user, localPhone)) {
-                    return res.status(401).json({ error: 'Invalid credentials' });
+                const authIdentity = await signInToSupabase(authClient, null, user, localPhone, password);
+                if (authIdentity) {
+                    authUser = authIdentity;
+                    // Once Supabase Auth accepts the password, the old app hash
+                    // must no longer be able to bypass a later password reset.
+                    if (user.password_hash) await invalidateLegacyPassword(user.id);
+                } else {
+                    let legacyPasswordValid = false;
+                    try {
+                        legacyPasswordValid = Boolean(user.password_hash) && await bcrypt.compare(password, user.password_hash);
+                    } catch (_) {
+                        legacyPasswordValid = false;
+                    }
+                    if (!legacyPasswordValid) return res.status(401).json({ error: 'Invalid credentials' });
+
+                    const matchingAuthUser = await findAuthUserForAccount(user, localPhone);
+                    if (!matchingAuthUser) {
+                        console.error('Legacy login matched but no linked Supabase Auth identity was found.');
+                        return res.status(503).json({ error: 'Your account needs a one-time Supabase sign-in setup. Please contact support.' });
+                    }
+
+                    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(matchingAuthUser.id, { password });
+                    if (updateError) throw updateError;
+                    authUser = await signInToSupabase(authClient, matchingAuthUser, user, localPhone, password);
+                    if (!authUser) {
+                        return res.status(503).json({ error: 'Your password was verified, but Supabase sign-in needs configuration. Please try again or contact support.' });
+                    }
+                    await invalidateLegacyPassword(user.id);
                 }
             } catch (authError) {
-                console.error('Supabase sign-in failed:', authError?.code || authError?.message || 'unknown error');
+                console.error('Supabase sign-in or legacy account migration failed:', authError?.code || authError?.message || 'unknown error');
                 return res.status(503).json({ error: 'Sign-in is temporarily unavailable. Please try again.' });
             }
 
