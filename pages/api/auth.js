@@ -162,11 +162,33 @@ export default async function handler(req, res) {
                     }
                     if (!legacyPasswordValid) return res.status(401).json({ error: 'Invalid credentials' });
 
-                    const matchingAuthUser = await findAuthUserForAccount(user, localPhone);
+                    let matchingAuthUser = await findAuthUserForAccount(user, localPhone);
                     if (!matchingAuthUser) {
-                        console.error('Legacy login matched but no linked Supabase Auth identity was found.');
-                        return res.status(503).json({ error: 'Your account needs a one-time Supabase sign-in setup. Please contact support.' });
+                        const authAttributes = {
+                            phone: `+234${localPhone}`,
+                            password,
+                            phone_confirm: true,
+                            user_metadata: { full_name: user.full_name }
+                        };
+                        const email = String(user.email || '').trim().toLowerCase();
+                        if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                            authAttributes.email = email;
+                            authAttributes.email_confirm = true;
+                        }
+                        const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser(authAttributes);
+                        if (createError) {
+                            // Handle a concurrent request or an Auth identity
+                            // that appeared between the lookup and creation.
+                            matchingAuthUser = await findAuthUserForAccount(user, localPhone);
+                            if (!matchingAuthUser) {
+                                console.error('Legacy account Auth setup failed:', createError.code || createError.message);
+                                return res.status(503).json({ error: 'We verified your existing password but could not link its Supabase sign-in. Please contact support.' });
+                            }
+                        } else {
+                            matchingAuthUser = created?.user || null;
+                        }
                     }
+                    if (!matchingAuthUser) return res.status(503).json({ error: 'Could not prepare Supabase sign-in for this account. Please contact support.' });
 
                     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(matchingAuthUser.id, { password });
                     if (updateError) throw updateError;
