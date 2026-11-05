@@ -69,10 +69,10 @@ export default function AdminDashboard() {
       const response = await fetch('/api/admin', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || 'Administrator action failed.');
-      setNotice(successText || result.message || 'Saved successfully.');
+      setNotice(result.auditWarning ? `${successText || 'Action completed.'} Audit logging failed; check server logs.` : (successText || result.message || 'Saved successfully.'));
       setRefreshKey((value) => value + 1);
       return result;
-    } catch (err) { setError(err.message); return null; }
+    } catch (err) { setError(err.message); setRefreshKey((value) => value + 1); return null; }
     finally { setBusy(false); }
   }
 
