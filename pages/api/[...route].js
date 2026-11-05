@@ -1,7 +1,5 @@
-import { supabaseAdmin } from '../../lib/supabase';
+import { supabaseAdmin, createSupabaseAuthClient } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
 import { getSiteSettings, publicSiteSettings } from '../../lib/site-settings';
 
 const DEFAULT_BANNERS = [
@@ -129,37 +127,47 @@ async function listOrders(req, res) {
 }
 
 async function passwordReset(req, res) {
-  if (req.method === 'POST') {
-    const { identifier } = req.body;
-    if (!identifier) return res.status(400).json({ error: 'Identifier required' });
-    const { data: user } = await supabaseAdmin
-      .from('users').select('id, email, phone').or(`phone.eq.${identifier},email.eq.${identifier}`).single();
-    if (!user) return res.status(200).json({ message: 'If account exists, link sent.' });
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 3600000);
-    await supabaseAdmin.from('password_resets').delete().eq('user_id', user.id);
-    await supabaseAdmin.from('password_resets').insert({
-      user_id: user.id, token_hash: tokenHash, expires_at: expiresAt.toISOString()
-    });
-    console.log(`RESET LINK FOR ${user.phone}: /reset-password?token=${rawToken}`);
-    return res.status(200).json({ message: 'Reset link generated.' });
+  if (req.method !== 'POST') return res.status(405).end();
+  const identifier = String(req.body?.identifier || '').trim();
+  if (!identifier) return res.status(400).json({ error: 'Phone number or email is required.' });
+  const genericMessage = 'If the account exists, Supabase will send password-reset instructions to its registered email.';
+  const siteBase = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
+  if (!siteBase) return res.status(503).json({ error: 'Supabase password recovery is not configured. Please contact support.' });
+
+  try {
+    let email = identifier.includes('@') ? identifier.toLowerCase() : '';
+    if (!email) {
+      const digits = identifier.replace(/\D/g, '');
+      const phone = digits.length === 13 && digits.startsWith('234') ? digits.slice(3)
+        : digits.length === 11 && digits.startsWith('0') ? digits.slice(1) : digits;
+      if (/^\d{10}$/.test(phone)) {
+        const { data: appUser, error: userError } = await supabaseAdmin.from('users')
+          .select('id, email').eq('phone', phone).maybeSingle();
+        if (userError) throw userError;
+        email = appUser?.email || '';
+        if (!email && appUser?.id) {
+          const { data: authResult } = await supabaseAdmin.auth.admin.getUserById(appUser.id);
+          email = authResult?.user?.email || '';
+        }
+      }
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(200).json({ message: genericMessage });
+    }
+
+    const redirectTo = new URL('/reset-password', siteBase).toString();
+    const authClient = createSupabaseAuthClient();
+    const { error } = await authClient.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) {
+      console.error('Supabase password recovery request failed:', error.code || error.message || 'unknown error');
+      return res.status(503).json({ error: 'Supabase could not send password-reset instructions. Please try again later.' });
+    }
+    return res.status(200).json({ message: genericMessage });
+  } catch (error) {
+    console.error('Supabase password recovery request failed:', error?.code || error?.message || 'unknown error');
+    return res.status(503).json({ error: 'Password recovery is temporarily unavailable. Please try again later.' });
   }
-  if (req.method === 'PUT') {
-    const { token, newPassword } = req.body;
-    if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password required' });
-    if (newPassword.length < 6) return res.status(400).json({ error: 'Password too short' });
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const { data: record } = await supabaseAdmin.from('password_resets').select('*')
-      .eq('token_hash', tokenHash).gt('expires_at', new Date().toISOString()).single();
-    if (!record) return res.status(400).json({ error: 'Invalid or expired token' });
-    const salt = await bcrypt.genSalt(10);
-    const hashedNewPass = await bcrypt.hash(newPassword, salt);
-    await supabaseAdmin.from('users').update({ password_hash: hashedNewPass }).eq('id', record.user_id);
-    await supabaseAdmin.from('password_resets').delete().eq('token_hash', tokenHash);
-    return res.status(200).json({ success: true });
-  }
-  return res.status(405).end();
 }
 
 async function publicSettings(req, res) {

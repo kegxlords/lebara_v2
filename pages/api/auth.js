@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '../../lib/supabase';
+import { supabaseAdmin, createSupabaseAuthClient } from '../../lib/supabase';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { generateToken, setAuthCookie, clearAuthCookie, verifyToken } from '../../lib/auth';
@@ -6,6 +6,21 @@ import { generateToken, setAuthCookie, clearAuthCookie, verifyToken } from '../.
 async function awardWelcomeBonus(userId) {
     const { error } = await supabaseAdmin.rpc('grant_welcome_bonus', { p_user_id: userId });
     if (error) console.error('Welcome bonus could not be applied:', error.message);
+}
+
+function normalizeLocalPhone(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length === 13 && digits.startsWith('234')) return digits.slice(3);
+    if (digits.length === 11 && digits.startsWith('0')) return digits.slice(1);
+    return digits;
+}
+
+function authUserMatchesAccount(authUser, account, phone) {
+    if (authUser.id === account.id) return true;
+    const authEmail = String(authUser.email || '').trim().toLowerCase();
+    const accountEmail = String(account.email || '').trim().toLowerCase();
+    if (authEmail && accountEmail && authEmail === accountEmail) return true;
+    return normalizeLocalPhone(authUser.phone) === phone;
 }
 
 export default async function handler(req, res) {
@@ -83,15 +98,30 @@ export default async function handler(req, res) {
         if (action === 'login') {
             const { phone, password } = req.body;
             if (!phone || !password) return res.status(400).json({ error: 'Missing credentials' });
+            const localPhone = normalizeLocalPhone(phone);
+            if (!/^\d{10}$/.test(localPhone)) return res.status(401).json({ error: 'Invalid credentials' });
 
             const { data: user, error } = await supabaseAdmin
-                .from('users').select('*').eq('phone', phone).single();
-            
+                .from('users').select('*').eq('phone', localPhone).maybeSingle();
             if (error || !user) return res.status(401).json({ error: 'Invalid credentials' });
             if (user.is_banned) return res.status(403).json({ error: 'Account suspended' });
 
-            const isValid = await bcrypt.compare(password, user.password_hash);
-            if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
+            try {
+                const authClient = createSupabaseAuthClient();
+                const credentials = [{ phone: `+234${localPhone}` }];
+                if (user.email) credentials.push({ email: String(user.email).trim().toLowerCase() });
+                let authUser = null;
+                for (const identity of credentials) {
+                    const { data, error: authError } = await authClient.auth.signInWithPassword({ ...identity, password });
+                    if (!authError && data?.user) { authUser = data.user; break; }
+                }
+                if (!authUser || !authUserMatchesAccount(authUser, user, localPhone)) {
+                    return res.status(401).json({ error: 'Invalid credentials' });
+                }
+            } catch (authError) {
+                console.error('Supabase sign-in failed:', authError?.code || authError?.message || 'unknown error');
+                return res.status(503).json({ error: 'Sign-in is temporarily unavailable. Please try again.' });
+            }
 
             await awardWelcomeBonus(user.id);
             const token = generateToken({ id: user.id, phone: user.phone });
@@ -104,10 +134,14 @@ export default async function handler(req, res) {
         if (action === 'register') {
             const { fullName, phone, password, email, refCode } = req.body;
             if (!fullName || !phone || !password) return res.status(400).json({ error: 'Missing fields' });
+            if (typeof phone !== 'string' || !/^\d{10}$/.test(phone)) return res.status(400).json({ error: 'Phone number must contain exactly 10 digits.' });
             if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+            const emailValue = email ? String(email).trim().toLowerCase() : null;
+            if (emailValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) return res.status(400).json({ error: 'Enter a valid email address.' });
 
             // Check Duplicate
-            const { data: existing } = await supabaseAdmin.from('users').select('id').eq('phone', phone).maybeSingle();
+            const { data: existing, error: lookupError } = await supabaseAdmin.from('users').select('id').eq('phone', phone).maybeSingle();
+            if (lookupError) return res.status(503).json({ error: 'Could not verify this phone number. Please try again.' });
             if (existing) return res.status(409).json({ error: 'Phone already registered' });
 
             // Hash Password
@@ -124,13 +158,40 @@ export default async function handler(req, res) {
             // Generate Unique Code
             const newCode = crypto.randomBytes(4).toString('hex').toUpperCase();
 
+            // Create the Supabase Auth identity first; public.users keeps the
+            // app profile and uses the Auth UUID so both records stay linkable.
+            let authUser;
+            try {
+                const authAttributes = {
+                    phone: `+234${phone}`,
+                    password,
+                    phone_confirm: true,
+                    user_metadata: { full_name: fullName }
+                };
+                if (emailValue) authAttributes.email = emailValue;
+                const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser(authAttributes);
+                if (authError) {
+                    const duplicate = authError.status === 409 || authError.status === 422
+                        || ['email_exists', 'phone_exists', 'user_already_exists'].includes(authError.code);
+                    if (duplicate) return res.status(409).json({ error: 'Phone or email already registered.' });
+                    console.error('Supabase account creation failed:', authError.code || authError.message);
+                    return res.status(503).json({ error: 'Could not create your account. Please try again.' });
+                }
+                authUser = authData?.user;
+                if (!authUser?.id) throw new Error('Supabase Auth did not return a user id.');
+            } catch (authError) {
+                console.error('Supabase account creation failed:', authError?.code || authError?.message || 'unknown error');
+                return res.status(503).json({ error: 'Could not create your account. Please try again.' });
+            }
+
             // Insert User
             const { data: newUser, error: insertErr } = await supabaseAdmin
                 .from('users')
                 .insert({
+                    id: authUser.id,
                     full_name: fullName,
                     phone: phone,
-                    email: email || null,
+                    email: emailValue,
                     password_hash: hashedPass,
                     referral_code: newCode,
                     referred_by: referredByUuid,
@@ -140,11 +201,22 @@ export default async function handler(req, res) {
                 .select('id, full_name, phone, email, referral_code, referred_by, role, is_admin, created_at')
                 .single();
 
-            if (insertErr) throw insertErr;
+            if (insertErr?.code === '23505') {
+                await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+                return res.status(409).json({ error: 'Phone already registered' });
+            }
+            if (insertErr) {
+                await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+                throw insertErr;
+            }
 
             // Create Wallet
             const { error: walletError } = await supabaseAdmin.from('wallets').insert({ user_id: newUser.id });
-            if (walletError) return res.status(500).json({ error: 'Account created, but wallet setup needs support.' });
+            if (walletError) {
+                await supabaseAdmin.from('users').delete().eq('id', newUser.id);
+                await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+                return res.status(500).json({ error: 'Account setup failed. Please try registering again.' });
+            }
             await awardWelcomeBonus(newUser.id);
 
             // Auto Login
