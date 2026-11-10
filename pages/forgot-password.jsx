@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
     <div className="auth-layout-container">
       <div className="auth-floating-card">
         <h1>Reset Password</h1>
-        <p className="sub">Enter your account email, or your phone number if an email is saved to your account. Supabase sends the recovery link to that registered email.</p>
+        <p className="sub">Enter the email saved to your account. A phone number works only when an email is already linked to that account. Check your spam or promotions folder after requesting the link.</p>
         {message && <div className="alert-success">{message}</div>}
         {error && <div className="alert-error">{error}</div>}
         <form onSubmit={handleSubmit}>
