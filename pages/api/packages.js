@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
-import { canPurchasePackage } from '../../lib/package-access';
+import { canPurchasePackage, getPackagePurchaseCount, packageLimitMessage } from '../../lib/package-access';
 
 export default async function handler(req, res) {
     const method = req.method;
@@ -31,6 +31,8 @@ export default async function handler(req, res) {
             const { data: pkg } = await supabaseAdmin.from('packages').select('*').eq('id', packageId).eq('is_active', true).maybeSingle();
             if (!pkg || pkg.is_locked) return res.status(404).json({ error: 'Package unavailable' });
             if (!(await canPurchasePackage(user.id, pkg))) return res.status(403).json({ error: `This VIP plan requires ${Number(pkg.vip_required_invites)} activated referrals.` });
+            const purchaseLimitError = packageLimitMessage(pkg, await getPackagePurchaseCount(user.id, pkg.id));
+            if (purchaseLimitError) return res.status(409).json({ error: purchaseLimitError });
 
             // 2. Check Balance
             const { data: wallet } = await supabaseAdmin.from('wallets').select('balance').eq('user_id', user.id).single();
@@ -53,6 +55,7 @@ export default async function handler(req, res) {
 
         } catch (err) {
             console.error(err);
+            if (/PACKAGE_PURCHASE_LIMIT_REACHED/i.test(err?.message || '')) return res.status(409).json({ error: 'You have reached the purchase limit for this package.' });
             res.status(500).json({ error: 'Purchase failed' });
         }
         return;
