@@ -137,7 +137,10 @@ async function passwordReset(req, res) {
   const identifier = String(req.body?.identifier || '').trim();
   if (!identifier) return res.status(400).json({ error: 'Phone number or email is required.' });
   const genericMessage = 'If the account exists, Supabase will send password-reset instructions to its registered email.';
-  const siteBase = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const requestHost = String(req.headers.host || '').trim();
+  const requestOrigin = requestHost ? `${forwardedProto || (requestHost.startsWith('localhost') ? 'http' : 'https')}://${requestHost}` : '';
+  const siteBase = requestOrigin || process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL
     || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
   if (!siteBase) return res.status(503).json({ error: 'Supabase password recovery is not configured. Please contact support.' });
 
