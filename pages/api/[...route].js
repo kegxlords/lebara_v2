@@ -161,6 +161,9 @@ async function passwordReset(req, res) {
         }
       }
     }
+    if (!email && !identifier.includes('@')) {
+      return res.status(400).json({ error: 'This account has no recovery email linked. Contact support to add an email address first.' });
+    }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(200).json({ message: genericMessage });
     }
@@ -170,7 +173,7 @@ async function passwordReset(req, res) {
     const { error } = await authClient.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) {
       console.error('Supabase password recovery request failed:', error.code || error.message || 'unknown error');
-      return res.status(503).json({ error: 'Supabase could not send password-reset instructions. Please try again later.' });
+      return res.status(503).json({ error: 'Password-reset email could not be sent. Check that Supabase email delivery is configured, then try again.' });
     }
     return res.status(200).json({ message: genericMessage });
   } catch (error) {
