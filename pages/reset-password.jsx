@@ -28,12 +28,21 @@ export default function ResetPasswordPage() {
       if (event === 'PASSWORD_RECOVERY' || session) setRecoveryReady(Boolean(session));
     });
 
-    client.auth.getSession().then(({ data, error: sessionError }) => {
+    async function resolveRecoverySession() {
+      const code = new URLSearchParams(window.location.search).get('code');
+      if (code) {
+        const { error: exchangeError } = await client.auth.exchangeCodeForSession(code);
+        if (exchangeError) throw exchangeError;
+        window.history.replaceState({}, document.title, '/reset-password');
+      }
+      const { data, error: sessionError } = await client.auth.getSession();
       if (!active) return;
       setRecoveryReady(Boolean(data?.session));
       if (sessionError) setError('This recovery link is invalid or expired. Request a new one.');
       setChecking(false);
-    }).catch(() => {
+    }
+
+    resolveRecoverySession().catch(() => {
       if (!active) return;
       setError('This recovery link is invalid or expired. Request a new one.');
       setChecking(false);
