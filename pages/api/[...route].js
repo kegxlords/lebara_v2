@@ -82,7 +82,7 @@ async function listOrders(req, res) {
   try {
     const { data, error } = await supabaseAdmin
       .from('user_packages')
-      .select('*, packages(name, image_url, daily_income, days)')
+      .select('*, packages(name, image_url, daily_income, days, capital_return)')
       .eq('user_id', user.id)
       .order('purchased_at', { ascending: false });
     if (error) throw error;
@@ -101,9 +101,15 @@ async function listOrders(req, res) {
         p_total_days: Number(op.days) || Number(op.packages?.days) || 0
       });
       if (incomeError) console.error('Order-page income reconciliation failed:', incomeError.message || incomeError);
+      if (!incomeError && Number(op.days_collected || 0) + 1 >= Number(op.days) && Number(op.packages?.capital_return) > 0) {
+        const { error: maturityError } = await supabaseAdmin.rpc('process_maturity_capital_for_package', {
+          p_user_id: op.user_id, p_pkg_id: String(op.id), p_amount: Number(op.packages.capital_return)
+        });
+        if (maturityError) console.error('Order-page maturity reconciliation failed:', maturityError.message || maturityError);
+      }
     }
     const refreshed = duePackages.length
-      ? await supabaseAdmin.from('user_packages').select('*, packages(name, image_url, daily_income, days)').eq('user_id', user.id).order('purchased_at', { ascending: false })
+      ? await supabaseAdmin.from('user_packages').select('*, packages(name, image_url, daily_income, days, capital_return)').eq('user_id', user.id).order('purchased_at', { ascending: false })
       : { data, error: null };
     if (refreshed.error) throw refreshed.error;
     const orders = (refreshed.data || []).map((op) => {
