@@ -18,7 +18,7 @@ export default async function handler(req, res) {
         // Fetch Active Packages due for payment
         const { data: packages, error } = await supabaseAdmin
             .from('user_packages')
-            .select(`*, packages(name, daily_income)`)
+            .select(`*, packages(name, daily_income, capital_return)`)
             .eq('status', 'active')
             .order('purchased_at', { ascending: true });
 
@@ -49,6 +49,14 @@ export default async function handler(req, res) {
             if (!updateErr) {
                 paidCount++;
                 totalCredited += parseFloat(pkg.packages.daily_income);
+                if (Number(pkg.days_collected) + 1 >= Number(pkg.days) && Number(pkg.packages.capital_return) > 0) {
+                    const { error: maturityError } = await supabaseAdmin.rpc('process_maturity_capital_for_package', {
+                        p_user_id: pkg.user_id,
+                        p_pkg_id: String(pkg.id),
+                        p_amount: Number(pkg.packages.capital_return)
+                    });
+                    if (maturityError) console.error('Maturity capital payout failed:', maturityError.message || maturityError);
+                }
             }
         }
 
