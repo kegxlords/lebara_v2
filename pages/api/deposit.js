@@ -4,6 +4,23 @@ import axios from 'axios';
 import { generateAfrStarSign } from '../../lib/crypto';
 import { getSiteSettings } from '../../lib/site-settings';
 
+function gatewayCustomerName(value) {
+    const cleaned = String(value || '')
+        .normalize('NFKC')
+        .replace(/[^\p{L}\p{N} .'-]/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 80);
+    return cleaned.length >= 2 ? cleaned : 'Lebara Member';
+}
+
+function gatewayPhone(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length === 10) return `+234${digits}`;
+    if (digits.length === 13 && digits.startsWith('234')) return `+${digits}`;
+    return value || '';
+}
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
     
@@ -52,9 +69,9 @@ export default async function handler(req, res) {
             merchant_sn: merchantSn,
             order_sn: orderRef,
             amount: amtStr,
-            name: profile?.full_name || 'Member',
-            email: profile?.email || `${user.id}@lebara.local`,
-            phone: profile?.phone || user.phone,
+            name: gatewayCustomerName(profile?.full_name),
+            email: profile?.email ? String(profile.email).trim().toLowerCase() : `${user.id}@lebara.local`,
+            phone: gatewayPhone(profile?.phone || user.phone),
             remark: "Lebara Deposit",
             redirect_url: `https://${req.headers.host}/deposit-result?ref=${orderRef}`,
             sign: sign
