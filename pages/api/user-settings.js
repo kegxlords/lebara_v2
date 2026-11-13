@@ -173,7 +173,7 @@ export default async function handler(req, res) {
                 if (Number.isFinite(requestedDay) && requestedDay !== day) {
                     return res.status(409).json({ error: `Your next reward is day ${day}. Refresh the page and try again.`, day });
                 }
-                const BONUS_AMOUNT = day <= 7 ? 50 : day <= 21 ? 100 : 200;
+                const BONUS_AMOUNT = 50;
 
                 // 3. Credit Wallet Atomically using RPC
                 // Ensure you have this RPC function in Supabase SQL Editor:
