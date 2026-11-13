@@ -14,13 +14,6 @@ function gatewayCustomerName(value) {
     return cleaned.length >= 2 ? cleaned : 'Lebara Member';
 }
 
-function gatewayPhone(value) {
-    const digits = String(value || '').replace(/\D/g, '');
-    if (digits.length === 10) return `+234${digits}`;
-    if (digits.length === 13 && digits.startsWith('234')) return `+${digits}`;
-    return value || '';
-}
-
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
     
@@ -71,7 +64,9 @@ export default async function handler(req, res) {
             amount: amtStr,
             name: gatewayCustomerName(profile?.full_name),
             email: profile?.email ? String(profile.email).trim().toLowerCase() : `${user.id}@lebara.local`,
-            phone: gatewayPhone(profile?.phone || user.phone),
+            // AfrStar's pay-in endpoint expects the local Nigerian number
+            // stored by this app (10 digits), not the +234 representation.
+            phone: String(profile?.phone || user.phone || '').replace(/\D/g, '').replace(/^234/, '').replace(/^0/, ''),
             remark: "Lebara Deposit",
             redirect_url: `https://${req.headers.host}/deposit-result?ref=${orderRef}`,
             sign: sign
