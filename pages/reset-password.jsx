@@ -30,15 +30,24 @@ export default function ResetPasswordPage() {
 
     async function resolveRecoverySession() {
       const code = new URLSearchParams(window.location.search).get('code');
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const hashError = hashParams.get('error_description') || hashParams.get('error');
+      if (hashError) throw new Error(decodeURIComponent(hashError.replace(/\+/g, ' ')));
       if (code) {
         const { error: exchangeError } = await client.auth.exchangeCodeForSession(code);
         if (exchangeError) throw exchangeError;
         window.history.replaceState({}, document.title, '/reset-password');
       }
-      const { data, error: sessionError } = await client.auth.getSession();
+      let { data, error: sessionError } = await client.auth.getSession();
+      // Mobile browsers may finish consuming the access-token hash just after
+      // the first getSession call. Give the auth listener a moment to hydrate.
+      if (!data?.session && !sessionError && window.location.hash) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        ({ data, error: sessionError } = await client.auth.getSession());
+      }
       if (!active) return;
       setRecoveryReady(Boolean(data?.session));
-      if (sessionError) setError('This recovery link is invalid or expired. Request a new one.');
+      if (sessionError || !data?.session) setError('This recovery link is invalid or expired. Request a new one.');
       setChecking(false);
     }
 
