@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 
 const STORAGE_KEY = 'lebara_daily_reward_v2';
-const rewardForDay = (day) => (day <= 7 ? 50 : day <= 21 ? 100 : 200);
+const rewardForDay = () => 50;
 const dateKey = (date = new Date()) => date.toISOString().slice(0, 10);
 const daysBetween = (from, to) => Math.round((new Date(to) - new Date(from)) / 86400000);
 
@@ -46,7 +46,7 @@ export default function SignInPage() {
 
   return <AppLayout title="Daily rewards">
     <section className="signin-premium-hero"><div className="reward-icon">✦</div><div><span className="eyebrow">CONSISTENCY PAYS</span><h1>Daily rewards</h1><p>Show up every day and unlock bigger bonuses.</p></div><div className="streak-pill"><b>{state.streak}</b><span>day streak</span></div></section>
-    <section className="reward-rules"><div><b>₦50</b><span>Days 1–7</span></div><div><b>₦100</b><span>Days 8–21</span></div><div><b>₦200</b><span>Days 22–30</span></div></section>
+    <section className="reward-rules"><div><b>₦50</b><span>Every daily check-in</span></div><div><b>30 days</b><span>Maximum streak</span></div></section>
     <section className="calendar-card"><div className="calendar-heading"><div><span className="eyebrow">30-DAY JOURNEY</span><h2>Complete your month</h2></div><strong>{state.streak}/30</strong></div><div className="calendar-progress"><span style={{ width: `${monthProgress}%` }} /></div><div className="reward-calendar">{calendar.map((day) => { const complete = state.completed.includes(day); const active = day === currentDay && !signedToday; return <div key={day} className={`reward-day ${complete ? 'complete' : ''} ${active ? 'active' : ''}`}><span>DAY</span><b>{day}</b><small>{complete ? '✓' : `₦${rewardForDay(day)}`}</small></div>; })}</div></section>
     {message && <div className={`reward-message ${message.startsWith('Reward') ? 'success' : 'error'}`}>{message}</div>}
     <button className="premium-claim-button" onClick={handleClaim} disabled={!ready || claiming || signedToday || state.streak >= 30}>{claiming ? 'Securing your reward…' : signedToday ? '✓ Claimed today' : state.streak >= 30 ? '30-day journey complete' : `Claim day ${currentDay} · ₦${rewardForDay(currentDay)}`}</button>
